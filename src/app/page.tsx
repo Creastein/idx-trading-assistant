@@ -112,7 +112,7 @@ export default function Home() {
               type="text"
               value={ticker}
               onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              placeholder="SEARCH TICKER (e.g. BBRI)..."
+              placeholder="CARI TICKER (contoh: BBRI)..."
               className="w-full bg-secondary/50 border border-border rounded-lg py-2 pl-4 pr-12 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
             />
             <button
@@ -137,11 +137,11 @@ export default function Home() {
           {stockData && (
             <div className="hidden lg:flex items-center gap-6 font-mono border-l border-border pl-6 animate-in slide-in-from-right-4 fade-in duration-500">
               <div>
-                <span className="text-xs text-muted-foreground block">LAST PRICE</span>
+                <span className="text-xs text-muted-foreground block">HARGA TERAKHIR</span>
                 <span className="text-lg font-bold text-foreground">{stockData.price?.toLocaleString("id-ID") || "N/A"}</span>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground block">CHANGE</span>
+                <span className="text-xs text-muted-foreground block">PERUBAHAN</span>
                 <span className={`text-lg font-bold ${(stockData.change || 0) >= 0 ? "text-profit" : "text-loss"}`}>
                   {(stockData.change || 0) >= 0 ? "+" : ""}{(stockData.changePercent || 0).toFixed(2)}%
                 </span>

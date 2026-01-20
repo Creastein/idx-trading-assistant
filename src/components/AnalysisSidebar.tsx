@@ -36,7 +36,7 @@ export default function AnalysisSidebar({
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
                         }`}
                 >
-                    {tradingMode === 'SCALPING' ? 'CALCULATOR' : 'FUNDAMENTALS'}
+                    {tradingMode === 'SCALPING' ? 'KALKULATOR' : 'FUNDAMENTAL'}
                 </button>
                 <button
                     onClick={() => setActiveTab("news")}
@@ -45,7 +45,7 @@ export default function AnalysisSidebar({
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
                         }`}
                 >
-                    NEWS RADAR
+                    RADAR BERITA
                 </button>
                 <button
                     onClick={() => setActiveTab("vision")}

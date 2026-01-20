@@ -20,7 +20,7 @@ export default function ModeSelectionScreen({ onSelectMode }: ModeSelectionScree
                     IDX PRO TERMINAL
                 </h1>
                 <p className="text-muted-foreground font-mono text-sm md:text-base max-w-lg mx-auto">
-                    Select your trading style to initialize the AI workspace.
+                    Pilih gaya trading Anda untuk menginisialisasi workspace AI.
                 </p>
             </div>
 
@@ -40,12 +40,12 @@ export default function ModeSelectionScreen({ onSelectMode }: ModeSelectionScree
                         </div>
                         <h2 className="text-2xl font-bold text-foreground mb-2 group-hover:text-profit transition-colors">⚡ Scalping Mode</h2>
                         <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                            Optimized for high-speed, short-term trades.
-                            <br /><span className="text-xs opacity-70">Interval: 1-5 Minutes • Focus: Volatility • AI: Aggressive</span>
+                            Dioptimalkan untuk trading jangka pendek berkecepatan tinggi.
+                            <br /><span className="text-xs opacity-70">Interval: 1-5 Menit • Fokus: Volatility • AI: Agresif</span>
                         </p>
 
                         <div className="flex items-center gap-2 text-xs font-mono text-profit">
-                            <span>INITIALIZE WORKSPACE</span>
+                            <span>INISIALISASI WORKSPACE</span>
                             <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
@@ -68,12 +68,12 @@ export default function ModeSelectionScreen({ onSelectMode }: ModeSelectionScree
                         </div>
                         <h2 className="text-2xl font-bold text-foreground mb-2 group-hover:text-chart-2 transition-colors">🌊 Swing Mode</h2>
                         <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                            Designed for trend analysis and position sizing.
-                            <br /><span className="text-xs opacity-70">Interval: Daily • Focus: Fundamentals • AI: Strategic</span>
+                            Dirancang untuk analisis trend dan position sizing.
+                            <br /><span className="text-xs opacity-70">Interval: Harian • Fokus: Fundamental • AI: Strategis</span>
                         </p>
 
                         <div className="flex items-center gap-2 text-xs font-mono text-chart-2">
-                            <span>INITIALIZE WORKSPACE</span>
+                            <span>INISIALISASI WORKSPACE</span>
                             <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>

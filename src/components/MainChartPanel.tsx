@@ -38,9 +38,9 @@ export default function MainChartPanel({ symbol, tradingMode }: MainChartPanelPr
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                         </svg>
                     </div>
-                    <h3 className="text-xl font-medium text-foreground mb-2">Ready to Analyze</h3>
+                    <h3 className="text-xl font-medium text-foreground mb-2">Siap untuk Analisis</h3>
                     <p className="text-sm max-w-sm mx-auto">
-                        Enter a stock ticker (e.g. <span className="text-primary font-mono">BBRI</span>) in the top bar to load the pro chart.
+                        Masukkan ticker saham (contoh: <span className="text-primary font-mono">BBRI</span>) di bar atas untuk memuat chart pro.
                     </p>
                 </div>
             )}
