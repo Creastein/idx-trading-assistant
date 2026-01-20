@@ -1,15 +1,16 @@
 "use client";
 
 import TradingViewChart from "@/components/TradingViewChart";
+import { TradingMode } from "@/lib/types";
+import { TRADINGVIEW } from "@/lib/constants";
 
 interface MainChartPanelProps {
     symbol: string | null;
-    tradingMode: 'SCALPING' | 'SWING';
+    tradingMode: TradingMode;
 }
 
 export default function MainChartPanel({ symbol, tradingMode }: MainChartPanelProps) {
-    // Determine interval: Scalping = 5m, Swing = D (Daily)
-    const interval = tradingMode === 'SCALPING' ? "5" : "D";
+    const interval = tradingMode === 'SCALPING' ? TRADINGVIEW.DEFAULT_INTERVAL.SCALPING : TRADINGVIEW.DEFAULT_INTERVAL.SWING;
 
     return (
         <div className="h-full flex flex-col bg-card rounded-xl border border-border overflow-hidden shadow-sm relative group">

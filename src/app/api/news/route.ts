@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import yahooFinance from "yahoo-finance2";
+import YahooFinance from "yahoo-finance2";
+const yahooFinance = new YahooFinance();
 import Groq from "groq-sdk";
+import { YAHOO_FINANCE, AI_MODELS } from "@/lib/constants";
+
+// Yahoo Finance Types
+interface YahooNewsItem {
+    title: string;
+    publisher: string;
+    link: string;
+    providerPublishTime?: number | Date;
+}
+// ... (skip down to mapping)
+
+
+interface YahooSearchResult {
+    news?: YahooNewsItem[];
+}
 
 // Initialize Groq
 const getGroqClient = () => {
@@ -19,14 +35,12 @@ export async function POST(request: NextRequest) {
         }
 
         // 1. Fetch News from Yahoo Finance
-        let newsItems: any[] = [];
+        let newsItems: YahooNewsItem[] = [];
         try {
-            // Yahoo Finance2 search usually returns news
-            const result: any = await yahooFinance.search(ticker, { newsCount: 5 });
+            const result = await yahooFinance.search(ticker, { newsCount: YAHOO_FINANCE.NEWS_COUNT }) as YahooSearchResult;
             newsItems = result.news || [];
         } catch (err) {
             console.error("Yahoo News fetch failed:", err);
-            // Fallback or empty (client will handle empty state)
         }
 
         if (newsItems.length === 0) {
@@ -43,7 +57,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "GROQ_API_KEY missing" }, { status: 500 });
         }
 
-        const headlinesText = newsItems.map((n: any) => `- ${n.title} (${n.publisher})`).join("\n");
+        const headlinesText = newsItems.map((n) => `- ${n.title} (${n.publisher})`).join("\n");
 
         const systemPrompt = `You are an expert Stock Sentiment Analyst for Swing Trading.
 Your job is to read news headlines and determine the market sentiment score (0-100) and provide a strategic summary.
@@ -72,7 +86,7 @@ Return ONLY a valid JSON object:
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            model: "llama-3.3-70b-versatile",
+            model: AI_MODELS.GROQ,
             temperature: 0.5,
             response_format: { type: "json_object" }
         });
@@ -89,7 +103,7 @@ Return ONLY a valid JSON object:
         return NextResponse.json({
             sentiment: aiResult.score,
             summary: aiResult.summary,
-            news: newsItems.map((n: any) => ({
+            news: newsItems.map((n) => ({
                 title: n.title,
                 publisher: n.publisher,
                 link: n.link,
