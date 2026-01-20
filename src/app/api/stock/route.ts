@@ -16,57 +16,13 @@ import {
     type VolumeAnalysisResult,
     type TechnicalAnalysisResult,
 } from "@/lib/indicators";
+import { StockData } from "@/lib/types";
+
 
 // ============================================================================
 // Type Definitions
 // ============================================================================
 
-interface EnhancedStockData {
-    symbol: string;
-    name: string;
-    quote: {
-        price: number;
-        change: number;
-        changePercent: number;
-        volume: number;
-        marketCap: number | null;
-        pe: number | null;
-        pb: number | null;
-        sector: string | null;
-        previousClose: number;
-        dayHigh: number;
-        dayLow: number;
-    };
-    historical: {
-        dates: string[];
-        open: number[];
-        high: number[];
-        low: number[];
-        close: number[];
-        volume: number[];
-    };
-    indicators: {
-        rsi: IndicatorResult | null;
-        macd: MACDResult | null;
-        bollingerBands: BollingerBandsResult | null;
-        ema20: number | null;
-        ema50: number | null;
-        sma20: number | null;
-        volumeAnalysis: VolumeAnalysisResult | null;
-    };
-    signals: Signal[];
-    supportResistance: {
-        support: number[];
-        resistance: number[];
-    };
-    atr: number;
-    recommendation: {
-        action: "STRONG_BUY" | "BUY" | "HOLD" | "SELL" | "STRONG_SELL";
-        confidence: number;
-        reasoning: string[];
-    };
-    timestamp: string;
-}
 
 interface Signal {
     type: "BUY" | "SELL";
@@ -108,7 +64,7 @@ interface ChartResult {
 // Cache Implementation
 // ============================================================================
 
-const cache = new Map<string, { data: EnhancedStockData; timestamp: number }>();
+const cache = new Map<string, { data: StockData; timestamp: number }>();
 const CACHE_DURATION_SCALPING = 5 * 60 * 1000; // 5 minutes
 const CACHE_DURATION_SWING = 60 * 60 * 1000; // 1 hour
 
@@ -484,45 +440,21 @@ export async function POST(request: NextRequest) {
             recommendation = generateRecommendation(signals, analysis);
         }
 
-        // Build response
-        const response: EnhancedStockData = {
+        // Build response - flatten structure to match StockData interface
+        const response: StockData = {
             symbol: normalizedSymbol,
             name: quote.longName || quote.shortName || normalizedSymbol,
-            quote: {
-                price: currentPrice,
-                change: quote.regularMarketChange || 0,
-                changePercent: quote.regularMarketChangePercent || 0,
-                volume: quote.regularMarketVolume || 0,
-                marketCap: quote.marketCap || null,
-                pe: quote.trailingPE || null,
-                pb: quote.priceToBook || null,
-                sector: null,
-                previousClose: quote.regularMarketPreviousClose || 0,
-                dayHigh: quote.regularMarketDayHigh || currentPrice,
-                dayLow: quote.regularMarketDayLow || currentPrice,
-            },
-            historical: {
-                dates: historicalData.map((q) => q.date?.toISOString() || ""),
-                open: historicalData.map((q) => q.open || 0),
-                high: historicalData.map((q) => q.high || 0),
-                low: historicalData.map((q) => q.low || 0),
-                close: closes,
-                volume: volumes,
-            },
-            indicators: {
-                rsi: analysis?.rsi || null,
-                macd: analysis?.macd || null,
-                bollingerBands: analysis?.bollingerBands || null,
-                ema20: ema20Result?.current || null,
-                ema50: ema50Result?.current || null,
-                sma20: sma20Result?.current || null,
-                volumeAnalysis: volumeAnalysisResult,
-            },
-            signals,
-            supportResistance,
-            atr,
-            recommendation,
-            timestamp: new Date().toISOString(),
+            price: currentPrice,
+            currency: "IDR",
+            change: quote.regularMarketChange || 0,
+            changePercent: quote.regularMarketChangePercent || 0,
+            volume: quote.regularMarketVolume || 0,
+            marketCap: quote.marketCap || undefined,
+            pe: quote.trailingPE || undefined,
+            pb: quote.priceToBook || undefined,
+            previousClose: quote.regularMarketPreviousClose || 0,
+            dayHigh: quote.regularMarketDayHigh || currentPrice,
+            dayLow: quote.regularMarketDayLow || currentPrice,
         };
 
         // Update cache

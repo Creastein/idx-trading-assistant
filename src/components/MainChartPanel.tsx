@@ -25,10 +25,8 @@ export default function MainChartPanel({ symbol, tradingMode }: MainChartPanelPr
                         </span>
                     </div>
 
-                    <div className="flex-1 w-full h-full">
-                        {/* Force height to be 100% of container */}
+                    <div className="flex-1 w-full" style={{ minHeight: "600px", height: "100%" }}>
                         <div className="w-full h-full relative">
-                            {/* We might need to adjust TradingViewChart to accept className or style for height */}
                             <TradingViewChart symbol={symbol} interval={interval} />
                         </div>
                     </div>
