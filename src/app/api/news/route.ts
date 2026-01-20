@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
         let newsItems: any[] = [];
         try {
             // Yahoo Finance2 search usually returns news
-            const result = await yahooFinance.search(ticker, { newsCount: 5 });
+            const result: any = await yahooFinance.search(ticker, { newsCount: 5 });
             newsItems = result.news || [];
         } catch (err) {
             console.error("Yahoo News fetch failed:", err);
