@@ -9,9 +9,11 @@ const AdvancedRealTimeChart = dynamic(
     { ssr: false }
 );
 
+type ChartInterval = "1" | "3" | "5" | "15" | "30" | "60" | "120" | "180" | "240" | "D" | "W";
+
 interface TradingViewChartProps {
     symbol: string;
-    interval?: string;
+    interval?: ChartInterval;
 }
 
 export default function TradingViewChart({ symbol, interval = "D" }: TradingViewChartProps) {
