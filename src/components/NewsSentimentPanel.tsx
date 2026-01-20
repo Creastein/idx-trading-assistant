@@ -112,7 +112,7 @@ export default function NewsSentimentPanel({ ticker }: { ticker: string }) {
                                 {getSentimentLabel(data.sentiment)}
                             </div>
                             <p className="text-xs text-muted-foreground mt-2 border-t border-dashed border-border pt-2 leading-relaxed">
-                                "{data.summary}"
+                                &ldquo;{data.summary}&rdquo;
                             </p>
                         </div>
 

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface ScalpingCalculatorProps {
     currentPrice: number;
 }
 
 export default function ScalpingCalculator({ currentPrice }: ScalpingCalculatorProps) {
-    const [entryPrice, setEntryPrice] = useState<string>(currentPrice.toString());
+    const [entryPrice, setEntryPrice] = useState<string>(() => currentPrice.toString());
     const [lots, setLots] = useState<string>("1");
     const [tpPercent, setTpPercent] = useState<string>("2.0");
     const [slPercent, setSlPercent] = useState<string>("1.0");
@@ -15,13 +15,6 @@ export default function ScalpingCalculator({ currentPrice }: ScalpingCalculatorP
     // Constants for IDX
     const FEE_BUY = 0.0015; // 0.15%
     const FEE_SELL = 0.0025; // 0.25%
-    const TOTAL_FEE = FEE_BUY + FEE_SELL;
-
-    useEffect(() => {
-        if (currentPrice) {
-            setEntryPrice(currentPrice.toString());
-        }
-    }, [currentPrice]);
 
     const calculate = () => {
         const entry = parseFloat(entryPrice) || 0;

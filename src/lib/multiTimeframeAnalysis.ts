@@ -12,11 +12,9 @@ import {
     calculateRSI,
     calculateMACD,
     calculateEMA,
-    calculateSMA,
     analyzeVolume,
     type IndicatorResult,
     type MACDResult,
-    type VolumeAnalysisResult,
 } from "./indicators";
 
 // ============================================================================
@@ -354,7 +352,7 @@ function generateRecommendation(
 
     // Default recommendation
     let action: RecommendedAction = "WAIT";
-    let confidence = confluence.strength;
+    const confidence = confluence.strength;
 
     if (confluence.direction === "BULLISH" && confluence.strength >= 60) {
         action = "BUY";

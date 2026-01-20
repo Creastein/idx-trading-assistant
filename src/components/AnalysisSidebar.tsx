@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import AIVisionPanel from "./AIVisionPanel";
 import NewsSentimentPanel from "./NewsSentimentPanel";
 import ScalpingCalculator from "./ScalpingCalculator";
@@ -24,15 +24,6 @@ export default function AnalysisSidebar({
     tradingMode
 }: AnalysisSidebarProps) {
     const [activeTab, setActiveTab] = useState<"fundamentals" | "news" | "vision">("fundamentals");
-
-    // Automatically switch default tab based on mode
-    useEffect(() => {
-        if (tradingMode === 'SCALPING') {
-            setActiveTab("fundamentals"); // Re-using the 'fundamentals' key state but rendering Calculator content
-        } else {
-            setActiveTab("fundamentals");
-        }
-    }, [tradingMode]);
 
     return (
         <div className="flex flex-col h-full bg-card rounded-xl border border-border overflow-hidden shadow-sm">
