@@ -78,21 +78,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-terminal-bg flex h-screen overflow-hidden">
-      {/* Sidebar Navigation */}
-      <SidebarNavigation
-        tradingMode={tradingMode}
-        onBackToModeSelection={() => setTradingMode(null)}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
-
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="border-b border-terminal-border bg-card/80 backdrop-blur-md sticky top-0 z-50 shrink-0">
+      <div className="flex-1 flex flex-col overflow-hidden mr-14">
+        {/* Header - Borderless & Seamless */}
+        <header className="bg-background/50 backdrop-blur-md sticky top-0 z-50 shrink-0">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-6">
 
-            {/* Brand & Back Button */}
+            {/* Brand (No Back Button) */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-chart-2 flex items-center justify-center shadow-lg shadow-primary/20">
                 <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,33 +108,26 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-
-              {/* Back Button - Visible on all screens */}
-              <button
-                onClick={() => setTradingMode(null)}
-                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/50 hover:bg-secondary border border-border text-xs font-mono text-muted-foreground hover:text-foreground transition-all group"
-                title="Kembali ke Mode Selection"
-              >
-                <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                <span className="hidden sm:inline">BACK</span>
-              </button>
             </div>
 
-            {/* Search Bar - Centered */}
-            <form onSubmit={handleSearch} className="flex-1 max-w-md relative">
+            {/* Search Bar - Seamless Integration */}
+            <form onSubmit={handleSearch} className="flex-1 max-w-md relative group">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-muted-foreground group-focus-within:text-primary transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
               <input
                 type="text"
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                placeholder="CARI TICKER (contoh: BBRI)..."
-                className="w-full bg-secondary/50 border border-border rounded-lg py-2 pl-4 pr-12 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                placeholder="Cari Ticker (cth: BBRI)..."
+                className="w-full bg-secondary/30 hover:bg-secondary/50 focus:bg-background border-none rounded-full py-2 pl-10 pr-12 text-sm transition-all shadow-sm focus:shadow-md focus:ring-1 focus:ring-primary/20 placeholder:text-muted-foreground/50"
               />
               <button
                 type="submit"
                 disabled={isLoading}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:bg-background hover:text-primary transition-all disabled:opacity-50"
               >
                 {isLoading ? (
                   <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
@@ -150,36 +135,33 @@ export default function Home() {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  <span className="text-[10px] font-bold opacity-0 group-focus-within:opacity-100 transition-opacity">↵</span>
                 )}
               </button>
             </form>
 
             {/* Key Stats Inline */}
             {stockData && (
-              <div className="hidden lg:flex items-center gap-6 font-mono border-l border-border pl-6 animate-in slide-in-from-right-4 fade-in duration-500">
+              <div className="hidden lg:flex items-center gap-6 pl-6 animate-in slide-in-from-right-4 fade-in duration-500">
                 <div>
-                  <span className="text-xs text-muted-foreground block">HARGA TERAKHIR</span>
-                  <span className="text-lg font-bold text-foreground">{stockData.price?.toLocaleString("id-ID") || "N/A"}</span>
+                  <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Harga Terakhir</span>
+                  <span className="text-lg font-mono font-bold text-foreground tracking-tight">{stockData.price?.toLocaleString("id-ID") || "N/A"}</span>
                 </div>
+                <div className="h-8 w-px bg-border/30"></div>
                 <div>
-                  <span className="text-xs text-muted-foreground block">PERUBAHAN</span>
-                  <span className={`text-lg font-bold ${(stockData.change || 0) >= 0 ? "text-profit" : "text-loss"}`}>
+                  <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Perubahan</span>
+                  <span className={`text-lg font-mono font-bold tracking-tight ${(stockData.change || 0) >= 0 ? "text-profit" : "text-loss"}`}>
                     {(stockData.change || 0) >= 0 ? "+" : ""}{(stockData.changePercent || 0).toFixed(2)}%
                   </span>
                 </div>
               </div>
             )}
-
           </div>
         </header>
 
         {/* Main Content - Grid Layout */}
-        {/* Main Content - Grid Layout */}
-        <main className="flex-1 p-4 overflow-hidden">
-          <div className="flex h-full gap-4">
+        <main className="flex-1 p-0 overflow-hidden">
+          <div className="flex h-full">
 
             {/* Main Chart Area (Expandable) */}
             <div className={`flex flex-col h-full transition-all duration-300 ${activeTab === 'chart' ? 'w-full' : 'hidden lg:flex lg:w-3/4'}`}>
@@ -191,7 +173,7 @@ export default function Home() {
 
             {/* Sidebar Tools (Collapsible) */}
             {activeTab !== 'chart' && (
-              <div className="w-full lg:w-1/4 h-full overflow-hidden flex flex-col animate-in slide-in-from-right-10 fade-in duration-300">
+              <div className="w-full lg:w-1/4 h-full overflow-hidden flex flex-col animate-in slide-in-from-right-10 fade-in duration-300 bg-background/50 border-l border-border/10 backdrop-blur-sm">
                 <AnalysisSidebar
                   ticker={ticker}
                   stockData={stockData}
@@ -208,7 +190,14 @@ export default function Home() {
           </div>
         </main>
       </div>
-      {/* End Main Content */}
+
+      {/* Sidebar Navigation - Fixed Right */}
+      <SidebarNavigation
+        tradingMode={tradingMode}
+        onBackToModeSelection={() => setTradingMode(null)}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
     </div>
   );
 }

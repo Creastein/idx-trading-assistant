@@ -29,7 +29,7 @@ export default function AnalysisSidebar({
     // Internal state removed, using props instead
 
     return (
-        <div className="flex flex-col h-full bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+        <div className="flex flex-col h-full bg-card/50 border-l border-border/50 overflow-hidden backdrop-blur-sm">
             {/* Tabs Header */}
             <div className="flex items-center border-b border-border bg-muted/40">
                 <button

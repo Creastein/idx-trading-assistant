@@ -13,7 +13,7 @@ export default function MainChartPanel({ symbol, tradingMode }: MainChartPanelPr
     const interval = tradingMode === 'SCALPING' ? TRADINGVIEW.DEFAULT_INTERVAL.SCALPING : TRADINGVIEW.DEFAULT_INTERVAL.SWING;
 
     return (
-        <div className="h-full flex flex-col bg-card rounded-xl border border-border overflow-hidden shadow-sm relative group">
+        <div className="h-full flex flex-col bg-transparent rounded-none border-none overflow-hidden relative group">
             {symbol ? (
                 <>
                     {/* Chart Info - Bottom Right */}
