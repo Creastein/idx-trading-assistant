@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import AIVisionPanel from "./AIVisionPanel";
 import NewsSentimentPanel from "./NewsSentimentPanel";
 import ScalpingCalculator from "./ScalpingCalculator";
@@ -13,6 +12,8 @@ interface AnalysisSidebarProps {
     isAnalyzingText: boolean;
     textAnalysis: string | null;
     tradingMode: TradingMode;
+    activeTab: "chart" | "fundamentals" | "news" | "vision";
+    onTabChange: (tab: "chart" | "fundamentals" | "news" | "vision") => void;
 }
 
 export default function AnalysisSidebar({
@@ -21,16 +22,18 @@ export default function AnalysisSidebar({
     onAnalyzeText,
     isAnalyzingText,
     textAnalysis,
-    tradingMode
+    tradingMode,
+    activeTab,
+    onTabChange
 }: AnalysisSidebarProps) {
-    const [activeTab, setActiveTab] = useState<"fundamentals" | "news" | "vision">("fundamentals");
+    // Internal state removed, using props instead
 
     return (
         <div className="flex flex-col h-full bg-card rounded-xl border border-border overflow-hidden shadow-sm">
             {/* Tabs Header */}
             <div className="flex items-center border-b border-border bg-muted/40">
                 <button
-                    onClick={() => setActiveTab("fundamentals")}
+                    onClick={() => onTabChange("fundamentals")}
                     className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "fundamentals"
                         ? "border-primary text-primary bg-primary/5"
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -39,7 +42,7 @@ export default function AnalysisSidebar({
                     {tradingMode === 'SCALPING' ? 'KALKULATOR' : 'FUNDAMENTAL'}
                 </button>
                 <button
-                    onClick={() => setActiveTab("news")}
+                    onClick={() => onTabChange("news")}
                     className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "news"
                         ? "border-purple-500 text-purple-500 bg-purple-500/5"
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -48,7 +51,7 @@ export default function AnalysisSidebar({
                     RADAR BERITA
                 </button>
                 <button
-                    onClick={() => setActiveTab("vision")}
+                    onClick={() => onTabChange("vision")}
                     className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "vision"
                         ? "border-chart-2 text-chart-2 bg-chart-2/5"
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"

@@ -16,12 +16,12 @@ export default function MainChartPanel({ symbol, tradingMode }: MainChartPanelPr
         <div className="h-full flex flex-col bg-card rounded-xl border border-border overflow-hidden shadow-sm relative group">
             {symbol ? (
                 <>
-                    {/* Toolbar / Header Overlay */}
-                    <div className="absolute top-4 left-4 z-10 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-border text-xs font-mono text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity flex items-center gap-2">
-                        <span>Chart: {symbol}</span>
-                        <span className="text-border">|</span>
-                        <span className={tradingMode === 'SCALPING' ? "text-profit" : "text-chart-2"}>
-                            {tradingMode} ({interval === "5" ? "5m" : "Daily"})
+                    {/* Chart Info - Bottom Right */}
+                    <div className="absolute bottom-4 right-4 z-10 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-border text-xs font-mono text-muted-foreground opacity-70 hover:opacity-100 transition-opacity flex items-center gap-2 shadow-lg">
+                        <span className="font-semibold">{symbol}</span>
+                        <span className="text-border">•</span>
+                        <span className={tradingMode === 'SCALPING' ? "text-profit font-semibold" : "text-chart-2 font-semibold"}>
+                            {tradingMode === 'SCALPING' ? '⚡ Scalping' : '🌊 Swing'} ({interval === "5" ? "5m" : "Daily"})
                         </span>
                     </div>
 
