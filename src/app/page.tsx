@@ -4,21 +4,9 @@ import { useState } from "react";
 import MainChartPanel from "@/components/MainChartPanel";
 import AnalysisSidebar from "@/components/AnalysisSidebar";
 import ModeSelectionScreen from "@/components/ModeSelectionScreen";
+import { StockData, TradingMode } from "@/lib/types";
 
-interface StockData {
-  symbol: string;
-  name: string;
-  price: number;
-  currency: string;
-  change: number;
-  changePercent: number;
-  volume?: number;
-  marketCap?: number;
-  pe?: number;
-  pb?: number;
-}
 
-export type TradingMode = 'SCALPING' | 'SWING';
 
 export default function Home() {
   const [tradingMode, setTradingMode] = useState<TradingMode | null>(null);

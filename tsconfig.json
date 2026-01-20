@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "check-models.ts"
+    "check-models.ts",
+    "test-news.ts"
   ]
 }

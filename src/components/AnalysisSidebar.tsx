@@ -4,16 +4,15 @@ import { useState, useEffect } from "react";
 import AIVisionPanel from "./AIVisionPanel";
 import NewsSentimentPanel from "./NewsSentimentPanel";
 import ScalpingCalculator from "./ScalpingCalculator";
+import { StockData, TradingMode } from "@/lib/types";
 
-// We will likely move the "Fundamental/Text Analysis" here too eventually
-// For now, let's allow passing children or define a simplified Fundamental view
 interface AnalysisSidebarProps {
     ticker: string;
-    stockData: any; // We'll refine this type
+    stockData: StockData | null;
     onAnalyzeText: () => void;
     isAnalyzingText: boolean;
     textAnalysis: string | null;
-    tradingMode: 'SCALPING' | 'SWING';
+    tradingMode: TradingMode;
 }
 
 export default function AnalysisSidebar({
@@ -83,7 +82,7 @@ export default function AnalysisSidebar({
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="p-3 bg-secondary/30 rounded-lg">
                                         <p className="text-[10px] text-muted-foreground font-mono uppercase">Market Cap</p>
-                                        <p className="font-mono text-sm font-medium">{(stockData.marketCap / 1e12).toFixed(2)}T</p>
+                                        <p className="font-mono text-sm font-medium">{stockData.marketCap ? (stockData.marketCap / 1e12).toFixed(2) + "T" : "N/A"}</p>
                                     </div>
                                     <div className="p-3 bg-secondary/30 rounded-lg">
                                         <p className="text-[10px] text-muted-foreground font-mono uppercase">Volume</p>
@@ -91,7 +90,7 @@ export default function AnalysisSidebar({
                                     </div>
                                     <div className="p-3 bg-secondary/30 rounded-lg">
                                         <p className="text-[10px] text-muted-foreground font-mono uppercase">P/E Ratio</p>
-                                        <p className={`font-mono text-sm font-medium ${stockData.pe > 20 ? "text-loss" : "text-profit"}`}>
+                                        <p className={`font-mono text-sm font-medium ${(stockData.pe ?? 0) > 20 ? "text-loss" : "text-profit"}`}>
                                             {stockData.pe?.toFixed(2) || "N/A"}
                                         </p>
                                     </div>
