@@ -325,9 +325,13 @@ export function TechnicalIndicatorsPanel({
     if (error) {
         return (
             <div className="w-full">
-                <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    📊 Technical Indicators
-                </h2>
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="h-px flex-1 bg-gray-800"></div>
+                    <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                        📊 Technical Indicators
+                    </h2>
+                    <div className="h-px flex-1 bg-gray-800"></div>
+                </div>
                 <div className="p-6 border-2 border-red-500/50 bg-red-500/10 rounded-lg">
                     <div className="flex items-start gap-3">
                         <span className="text-3xl">⚠️</span>
@@ -361,10 +365,14 @@ export function TechnicalIndicatorsPanel({
     if (isLoading) {
         return (
             <div className="w-full">
-                <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    📊 Technical Indicators
-                    <span className="inline-block w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></span>
-                </h2>
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="h-px flex-1 bg-gray-800"></div>
+                    <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                        📊 Technical Indicators
+                        <span className="inline-block w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></span>
+                    </h2>
+                    <div className="h-px flex-1 bg-gray-800"></div>
+                </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                     {[1, 2, 3, 4, 5, 6].map(i => (
                         <div key={i} className="bg-gray-900 border border-gray-800 p-4 rounded-lg animate-pulse">
@@ -382,9 +390,13 @@ export function TechnicalIndicatorsPanel({
     if (!indicators) {
         return (
             <div className="w-full">
-                <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    📊 Technical Indicators
-                </h2>
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="h-px flex-1 bg-gray-800"></div>
+                    <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                        📊 Technical Indicators
+                    </h2>
+                    <div className="h-px flex-1 bg-gray-800"></div>
+                </div>
                 <div className="p-8 text-center border border-gray-800 rounded-lg bg-gray-900/50">
                     <span className="text-4xl mb-3 block">📈</span>
                     <p className="text-gray-400">Select a stock to view technical indicators</p>
@@ -397,9 +409,13 @@ export function TechnicalIndicatorsPanel({
     // Normal render with indicators data
     return (
         <div className="w-full">
-            <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                📊 Technical Indicators
-            </h2>
+            <div className="flex items-center gap-4 mb-4">
+                <div className="h-px flex-1 bg-gray-800"></div>
+                <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                    📊 Technical Indicators
+                </h2>
+                <div className="h-px flex-1 bg-gray-800"></div>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                 <RSICard rsi={indicators.rsi} />
                 <MACDCard macd={indicators.macd} />

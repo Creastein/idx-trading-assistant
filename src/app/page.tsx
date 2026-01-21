@@ -3,13 +3,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import MainChartPanel from "@/frontend/components/MainChartPanel";
-import AnalysisSidebar from "@/frontend/components/AnalysisSidebar";
-import ModeSelectionScreen from "@/frontend/components/ModeSelectionScreen";
-import SidebarNavigation from "@/frontend/components/SidebarNavigation";
+
 import { TechnicalIndicatorsPanel } from "@/frontend/components/TechnicalIndicatorsPanel";
 import { TradingSignalsPanel } from "@/frontend/components/TradingSignalsPanel";
 import { LoadingOverlay } from "@/frontend/components/LoadingSpinner";
 import MultiTimeframePanel from "@/frontend/components/MultiTimeframePanel";
+import ModeSelectionScreen from "@/frontend/components/ModeSelectionScreen";
+import ScalpingCalculator from "@/frontend/components/ScalpingCalculator";
+import RiskManagement from "@/frontend/components/RiskManagement";
+import NewsSentimentPanel from "@/frontend/components/NewsSentimentPanel";
+import AIVisionPanel from "@/frontend/components/AIVisionPanel";
 import { StockData, TradingMode, EnhancedStockData } from "@/shared/types";
 import type { MultiTimeframeAnalysis } from "@/backend/analysis/multiTimeframe";
 import { SettingsDialog } from "@/frontend/components/SettingsDialog";
@@ -37,21 +40,14 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"chart" | "fundamentals" | "news" | "vision" | "risk">("fundamentals");
-
-  // AI Text Analysis State
-  const [isAnalyzingText, setIsAnalyzingText] = useState(false);
-  const [textAnalysis, setTextAnalysis] = useState<string | null>(null);
-
   // Multi-Timeframe Analysis State
   const [mtfAnalysis, setMtfAnalysis] = useState<MultiTimeframeAnalysis | null>(null);
   const [isLoadingMTF, setIsLoadingMTF] = useState(false);
   const [mtfLastUpdated, setMtfLastUpdated] = useState<number | null>(null);
 
-  // Reset active tab when trading mode changes to avoid orphaned tabs
-  useEffect(() => {
-    setActiveTab('fundamentals'); // Show bottom panel by default
-  }, [tradingMode]);
+  // Tab Navigation State
+  type Tab = 'analysis' | 'keystats' | 'tools' | 'news';
+  const [activeTab, setActiveTab] = useState<Tab>('analysis');
 
   // ============================================================================
   // Load Stock Data (Enhanced)
@@ -64,7 +60,6 @@ export default function Home() {
     setError(null);
     setStockData(null);
     setEnhancedData(null);
-    setTextAnalysis(null);
     setActiveSymbol(null);
 
     try {
@@ -195,31 +190,7 @@ export default function Home() {
 
   const handleAnalyzeText = async () => {
     if (!stockData || !tradingMode) return;
-    setIsAnalyzingText(true);
-    try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "text",
-          data: enhancedData || stockData,
-          mode: tradingMode,
-          symbol: activeSymbol || stockData.symbol
-        }),
-      });
-      const result = await response.json();
-      if (response.ok) {
-        setTextAnalysis(result.analysis);
-        // MTF is now auto-triggered, but update if response includes it
-        if (result.mtfAnalysis && !mtfAnalysis) {
-          setMtfAnalysis(result.mtfAnalysis);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsAnalyzingText(false);
-    }
+    // Removed unused text analysis handler logic since we switched to inline components
   };
 
   // 1. Show Selection Screen if mode is not selected
@@ -230,10 +201,10 @@ export default function Home() {
   return (
     <div className="min-h-[100dvh] bg-terminal-bg flex flex-col md:flex-row h-[100dvh] overflow-hidden user-select-none">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden ml-0 md:ml-14 pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col overflow-hidden ml-0 pb-16 md:pb-0">
         {/* Header - Borderless & Seamless */}
         <header className="bg-background/50 backdrop-blur-md sticky top-0 z-30 shrink-0 border-b border-border/10">
-          <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-3 lg:gap-6">
+          <div className="w-full px-4 py-3 flex items-center justify-between gap-3 lg:gap-6">
 
             {/* Brand (No Back Button) */}
             <div className="flex items-center gap-3 shrink-0">
@@ -269,40 +240,41 @@ export default function Home() {
               />
             </div>
 
-            {/* Trading Mode & Settings */}
-            <div className="flex items-center gap-2 lg:gap-3">
+            {/* Right Section: Stats + Settings */}
+            <div className="flex items-center gap-4 lg:gap-6 ml-auto">
+              {/* Key Stats Inline */}
+              {stockData && (
+                <div className="hidden lg:flex items-center gap-6 animate-in slide-in-from-right-4 fade-in duration-500">
+                  <div>
+                    <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Last Price</span>
+                    <span className="text-lg font-mono font-bold text-foreground tracking-tight">{stockData.price?.toLocaleString("id-ID") || "N/A"}</span>
+                  </div>
+                  <div className="h-8 w-px bg-border/30"></div>
+                  <div>
+                    <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Change</span>
+                    <span className={`text-lg font-mono font-bold tracking-tight ${(stockData.change || 0) >= 0 ? "text-profit" : "text-loss"}`}>
+                      {(stockData.change || 0) >= 0 ? "+" : ""}{(stockData.changePercent || 0).toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Display */}
+              {error && (
+                <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/30 rounded-lg animate-in fade-in">
+                  <span className="text-red-400 text-xs">⚠️ {error}</span>
+                  <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 text-xs">✕</button>
+                </div>
+              )}
+
+              {/* Settings Button - Rightmost */}
               <SettingsDialog />
             </div>
-
-            {/* Key Stats Inline */}
-            {stockData && (
-              <div className="hidden lg:flex items-center gap-6 pl-6 animate-in slide-in-from-right-4 fade-in duration-500">
-                <div>
-                  <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Last Price</span>
-                  <span className="text-lg font-mono font-bold text-foreground tracking-tight">{stockData.price?.toLocaleString("id-ID") || "N/A"}</span>
-                </div>
-                <div className="h-8 w-px bg-border/30"></div>
-                <div>
-                  <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Change</span>
-                  <span className={`text-lg font-mono font-bold tracking-tight ${(stockData.change || 0) >= 0 ? "text-profit" : "text-loss"}`}>
-                    {(stockData.change || 0) >= 0 ? "+" : ""}{(stockData.changePercent || 0).toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Error Display */}
-            {error && (
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/30 rounded-lg animate-in fade-in">
-                <span className="text-red-400 text-xs">⚠️ {error}</span>
-                <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 text-xs">✕</button>
-              </div>
-            )}
           </div>
         </header>
 
         {/* Main Content - Flex Column Layout */}
-        <main className="flex-1 p-0 overflow-hidden flex flex-col">
+        <main className="flex-1 p-0 overflow-hidden flex flex-col relative">
 
           {/* Main Chart Area (Full Width) */}
           <div className="flex flex-col flex-1 overflow-y-auto">
@@ -322,93 +294,184 @@ export default function Home() {
               </div>
             )}
 
-            {/* Technical Indicators & Signals Grid (Below Chart) - Always render to show states */}
-            <div className="flex-shrink-0 p-4 border-t border-border/10 bg-background/30">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Technical Indicators Panel */}
-                <TechnicalIndicatorsPanel
-                  indicators={enhancedData?.indicators || null}
-                  currentPrice={enhancedData?.quote.price || 0}
-                  error={error}
-                  isLoading={isLoading}
-                />
-
-                {/* Trading Signals Panel - SCALPING ONLY */}
-                {enhancedData && tradingMode === 'SCALPING' && (
-                  <TradingSignalsPanel
-                    signals={enhancedData.signals}
-                    recommendation={enhancedData.recommendation}
-                    isLoading={isLoading}
-                  />
-                )}
+            {/* Tab Navigation - Centered Floating Pill Design */}
+            <div className="flex justify-center py-4 relative z-10">
+              <div className="inline-flex items-center p-1.5 bg-gray-900/90 border border-white/10 rounded-full backdrop-blur-xl shadow-2xl">
+                {(['analysis', 'keystats', 'tools', 'news'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`
+                       px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 relative
+                       ${activeTab === tab
+                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'}
+                     `}
+                  >
+                    {tab === 'analysis' && 'Analysis'}
+                    {tab === 'keystats' && 'Key Stats'}
+                    {tab === 'tools' && 'Tools'}
+                    {tab === 'news' && 'News'}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              {/* Multi-Timeframe Confluence Analysis - SWING ONLY */}
-              {(mtfAnalysis || isLoadingMTF) && tradingMode === 'SWING' && (
-                <div className="mt-8 pt-6 border-t border-border/10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-300 uppercase tracking-wider">
-                        ⏱️ Multi-Timeframe
-                      </span>
-                      {mtfLastUpdated && !isLoadingMTF && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">
-                          Updated {Math.floor((Date.now() - mtfLastUpdated) / 60000)}m ago
-                        </span>
-                      )}
-                    </div>
+            {/* Tab Content Area */}
+            <div className="flex-shrink-0 p-4 bg-background/30 min-h-[400px]">
 
-                    <button
-                      onClick={handleRefreshAnalysis}
-                      disabled={isLoadingMTF}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary text-foreground transition-colors disabled:opacity-50"
-                    >
-                      <svg className={`w-3.5 h-3.5 ${isLoadingMTF ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Refresh Analysis
-                    </button>
+              {/* ======================= ANALYSIS TAB ======================= */}
+              {activeTab === 'analysis' && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-7xl mx-auto">
+
+                  {/* 1. Technical Indicators Section */}
+                  <div className="space-y-4">
+                    {/* Component has internal header, so we only provide container */}
+                    <TechnicalIndicatorsPanel
+                      indicators={enhancedData?.indicators || null}
+                      currentPrice={enhancedData?.quote.price || 0}
+                      error={error}
+                      isLoading={isLoading}
+                    />
                   </div>
 
-                  {isLoadingMTF ? (
-                    <div className="p-12 text-center border border-dashed border-gray-800 rounded-lg bg-gray-900/30">
-                      <div className="inline-block w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                      <p className="text-gray-400 font-mono text-sm">Analyzing multiple timeframes...</p>
-                      <p className="text-gray-600 text-xs mt-2">Checking 1h, 4h, 1d, 1w charts</p>
+                  {/* 2. Trading Signals (Scalping Mode Only) */}
+                  {enhancedData && tradingMode === 'SCALPING' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 mb-2">
+                        <div className="h-px flex-1 bg-border/20"></div>
+                        <span className="text-sm font-bold text-gray-300 uppercase tracking-wider">⚡ Scalping Signals</span>
+                        <div className="h-px flex-1 bg-border/20"></div>
+                      </div>
+                      <TradingSignalsPanel
+                        signals={enhancedData.signals}
+                        recommendation={enhancedData.recommendation}
+                        isLoading={isLoading}
+                      />
+                    </div>
+                  )}
+
+                  {/* 3. Multi-Timeframe Analysis (Swing Mode Only) */}
+                  {(mtfAnalysis || isLoadingMTF) && tradingMode === 'SWING' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 w-full">
+                          <div className="h-px flex-1 bg-border/20"></div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                              ⏱️ Multi-Timeframe
+                            </span>
+                            {mtfLastUpdated && !isLoadingMTF && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 whitespace-nowrap">
+                                {Math.floor((Date.now() - mtfLastUpdated) / 60000)}m ago
+                              </span>
+                            )}
+                          </div>
+                          <div className="h-px flex-1 bg-border/20"></div>
+                        </div>
+
+                        <button
+                          onClick={handleRefreshAnalysis}
+                          disabled={isLoadingMTF}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary/20 hover:bg-secondary/40 text-foreground transition-all border border-white/5 disabled:opacity-50 whitespace-nowrap shrink-0"
+                        >
+                          <svg className={`w-3.5 h-3.5 ${isLoadingMTF ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          {isLoadingMTF ? 'Scanning...' : 'Refresh'}
+                        </button>
+                      </div>
+
+                      {isLoadingMTF ? (
+                        <div className="p-12 text-center border border-dashed border-gray-800 rounded-xl bg-gray-900/30">
+                          <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                          <p className="text-gray-400 font-mono text-sm">Analyzing market structure across timeframes...</p>
+                        </div>
+                      ) : (
+                        <MultiTimeframePanel analysis={mtfAnalysis} />
+                      )}
+                    </div>
+                  )}
+
+                  {/* 4. AI Vision Panel */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4 mb-2">
+                      <div className="h-px flex-1 bg-border/20"></div>
+                      <span className="text-sm font-bold text-gray-300 uppercase tracking-wider">👁️ AI Vision Analysis</span>
+                      <div className="h-px flex-1 bg-border/20"></div>
+                    </div>
+                    <AIVisionPanel />
+                  </div>
+                </div>
+              )}
+
+              {/* ======================= KEY STATS TAB ======================= */}
+              {activeTab === 'keystats' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  {stockData ? (
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4">📊 Fundamental Analysis</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-secondary/20 rounded-lg">
+                        <div className="p-3 bg-secondary/30 rounded-lg">
+                          <p className="text-[10px] text-muted-foreground font-mono uppercase">Market Cap</p>
+                          <p className="font-mono text-sm font-medium">{stockData.marketCap ? (stockData.marketCap / 1e12).toFixed(2) + "T" : "N/A"}</p>
+                        </div>
+                        <div className="p-3 bg-secondary/30 rounded-lg">
+                          <p className="text-[10px] text-muted-foreground font-mono uppercase">Volume</p>
+                          <p className="font-mono text-sm font-medium">{stockData.volume?.toLocaleString()}</p>
+                        </div>
+                        <div className="p-3 bg-secondary/30 rounded-lg">
+                          <p className="text-[10px] text-muted-foreground font-mono uppercase">P/E Ratio</p>
+                          <p className="font-mono text-sm font-medium">{stockData.pe?.toFixed(2) || "N/A"}</p>
+                        </div>
+                        <div className="p-3 bg-secondary/30 rounded-lg">
+                          <p className="text-[10px] text-muted-foreground font-mono uppercase">P/B Ratio</p>
+                          <p className="font-mono text-sm font-medium">{stockData.pb?.toFixed(2) || "N/A"}</p>
+                        </div>
+                      </div>
+
+                      {tradingMode === 'SCALPING' && (
+                        <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                          <p className="text-yellow-200 text-xs">⚠️ Fundamental data is usually less relevant for Scalping (short-term) strategies.</p>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <MultiTimeframePanel analysis={mtfAnalysis} />
+                    <div className="p-8 text-center text-muted-foreground">Select a stock to view statistics</div>
+                  )}
+                </div>
+              )}
+
+              {/* ======================= TOOLS TAB ======================= */}
+              {activeTab === 'tools' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  {/* Scalping Calculator (Scalping Mode) */}
+                  {tradingMode === 'SCALPING' && stockData && (
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4">💰 Scalping Calculator</h3>
+                      <ScalpingCalculator currentPrice={stockData.price} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ======================= NEWS TAB ======================= */}
+              {activeTab === 'news' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  {activeSymbol ? (
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4">📰 News Sentiment</h3>
+                      <NewsSentimentPanel ticker={activeSymbol} />
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">Select a stock to view news</div>
                   )}
                 </div>
               )}
             </div>
           </div>
-
-          {/* Floating Panel - Analysis Tools */}
-          {activeTab !== 'chart' && (
-            <div className="fixed bottom-4 right-4 w-[500px] max-w-[90vw] max-h-[70vh] z-50 rounded-lg shadow-2xl border border-border/50 bg-card overflow-hidden">
-              <AnalysisSidebar
-                ticker={activeSymbol || ""}
-                stockData={stockData}
-                onAnalyzeText={handleAnalyzeText}
-                isAnalyzingText={isAnalyzingText}
-                textAnalysis={textAnalysis}
-                tradingMode={tradingMode}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-              />
-            </div>
-          )}
         </main>
       </div>
-
-      {/* Sidebar Navigation - Fixed Right */}
-      <SidebarNavigation
-        tradingMode={tradingMode}
-        onBackToModeSelection={() => setTradingMode(null)}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
     </div>
   );
 }
