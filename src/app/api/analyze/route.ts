@@ -29,6 +29,39 @@ const getGroqClient = () => {
 };
 
 // ============================================================================
+// Cache Configuration
+// ============================================================================
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const mtfCache = new Map<string, { data: MultiTimeframeAnalysis; timestamp: number }>();
+
+function getCachedMTF(symbol: string, mode: string): MultiTimeframeAnalysis | null {
+    const key = `${symbol}-${mode}`;
+    const cached = mtfCache.get(key);
+
+    if (cached) {
+        if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+            console.log(`[Cache] HIT for ${key}`);
+            return cached.data;
+        } else {
+            console.log(`[Cache] EXPIRED for ${key}`);
+            mtfCache.delete(key);
+        }
+    }
+    return null;
+}
+
+function setCachedMTF(symbol: string, mode: string, data: MultiTimeframeAnalysis) {
+    const key = `${symbol}-${mode}`;
+    if (mtfCache.size > 100) { // Limit cache size
+        const firstKey = mtfCache.keys().next().value;
+        if (firstKey) mtfCache.delete(firstKey);
+    }
+    mtfCache.set(key, { data, timestamp: Date.now() });
+    console.log(`[Cache] SET for ${key}`);
+}
+
+// ============================================================================
 // Type Definitions
 // ============================================================================
 
@@ -401,10 +434,18 @@ export async function POST(request: NextRequest) {
             // Fetch multi-timeframe analysis if not provided
             let mtfAnalysis: MultiTimeframeAnalysis | null = null;
             try {
-                mtfAnalysis = await analyzeMultipleTimeframes(
-                    stockSymbol,
-                    tradingMode === "SCALPING" ? "scalping" : "swing"
-                );
+                // Check cache first
+                const cacheKeyMode = tradingMode === "SCALPING" ? "scalping" : "swing";
+                mtfAnalysis = getCachedMTF(stockSymbol, cacheKeyMode);
+
+                if (!mtfAnalysis) {
+                    mtfAnalysis = await analyzeMultipleTimeframes(
+                        stockSymbol,
+                        cacheKeyMode
+                    );
+                    // Cache the result
+                    setCachedMTF(stockSymbol, cacheKeyMode, mtfAnalysis);
+                }
             } catch (error) {
                 console.warn("Multi-timeframe analysis failed:", error);
                 // Create minimal MTF analysis fallback

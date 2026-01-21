@@ -75,20 +75,20 @@ const RecommendationCard = ({ recommendation }: { recommendation: Recommendation
     const config = getActionConfig(recommendation.action);
 
     return (
-        <div className={`${config.bg} border ${config.border} rounded-xl p-5 transition-all`}>
-            <div className="flex items-center justify-between mb-4">
+        <div className={`${config.bg} border ${config.border} rounded-xl p-4 md:p-5 transition-all`}>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-3">
                     <span className="text-3xl">{config.emoji}</span>
                     <div>
                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Rekomendasi</h3>
-                        <p className={`text-2xl font-bold ${config.text}`}>
+                        <p className={`text-xl md:text-2xl font-bold ${config.text}`}>
                             {recommendation.action.replace("_", " ")}
                         </p>
                     </div>
                 </div>
-                <div className="text-right">
+                <div className="text-left md:text-right flex items-center md:block gap-4 md:gap-0 border-t md:border-t-0 border-gray-700/50 pt-2 md:pt-0 mt-2 md:mt-0">
                     <p className="text-xs text-gray-500 uppercase">Confidence</p>
-                    <p className={`text-3xl font-mono font-bold ${config.text}`}>
+                    <p className={`text-2xl md:text-3xl font-mono font-bold ${config.text}`}>
                         {recommendation.confidence}%
                     </p>
                 </div>
@@ -173,9 +173,14 @@ export function TradingSignalsPanel({ signals, recommendation, isLoading = false
 
     return (
         <div className="w-full">
-            <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                📡 Trading Signals
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                    📡 Trading Signals
+                </h2>
+                <span className="text-[10px] text-yellow-500/80 font-medium px-2 py-1 bg-yellow-500/10 rounded border border-yellow-500/20">
+                    Educational Only
+                </span>
+            </div>
 
             <div className="space-y-4">
                 {/* Overall Recommendation */}

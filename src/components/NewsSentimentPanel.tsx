@@ -15,6 +15,33 @@ interface SentimentData {
     news: NewsItem[];
 }
 
+// Helper function to safely format Unix timestamp to localized date
+function formatNewsDate(timestamp: number | undefined): string {
+    if (!timestamp || timestamp <= 0) {
+        return 'Recently';
+    }
+
+    try {
+        // timestamp is Unix time in seconds, convert to milliseconds
+        const date = new Date(timestamp * 1000);
+
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+            return 'Recently';
+        }
+
+        // Format as Indonesian locale
+        return date.toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    } catch (error) {
+        console.error('[News] Date formatting error:', error);
+        return 'Recently';
+    }
+}
+
 export default function NewsSentimentPanel({ ticker }: { ticker: string }) {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<SentimentData | null>(null);
@@ -132,9 +159,7 @@ export default function NewsSentimentPanel({ ticker }: { ticker: string }) {
                                     </h5>
                                     <div className="flex justify-between items-center text-[10px] text-muted-foreground font-mono">
                                         <span>{item.publisher}</span>
-                                        {item.providerPublishTime && (
-                                            <span>{new Date(item.providerPublishTime * 1000).toLocaleDateString()}</span>
-                                        )}
+                                        <span>{formatNewsDate(item.providerPublishTime)}</span>
                                     </div>
                                 </a>
                             ))}

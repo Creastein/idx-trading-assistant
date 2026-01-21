@@ -367,9 +367,10 @@ function multiIndicatorStrategy(
 export async function runBacktest(
     symbol: string,
     strategy: StrategyType,
-    mode: "scalping" | "swing"
+    mode: "scalping" | "swing",
+    customDays?: number
 ): Promise<BacktestResult> {
-    const daysBack = mode === "scalping" ? 30 : 90;
+    const daysBack = customDays || (mode === "scalping" ? 30 : 90);
     const historical = await fetchHistoricalData(symbol, daysBack);
 
     if (historical.length < 30) {

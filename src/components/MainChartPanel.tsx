@@ -25,7 +25,7 @@ export default function MainChartPanel({ symbol, tradingMode }: MainChartPanelPr
                         </span>
                     </div>
 
-                    <div className="flex-1 w-full" style={{ minHeight: "600px", height: "100%" }}>
+                    <div className="flex-1 w-full h-64 sm:h-80 md:h-96 lg:h-[600px] min-h-[250px]">
                         <div className="w-full h-full relative">
                             <TradingViewChart symbol={symbol} interval={interval} />
                         </div>

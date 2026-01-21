@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Calculator, AlertTriangle, TrendingUp, Shield, DollarSign } from "lucide-react";
+import { useSettings } from "./SettingsContext";
 
 // ============================================================================
 // Type Definitions
@@ -182,8 +183,15 @@ function ResultCard({ label, value, subtext, variant = "default" }: {
 // ============================================================================
 
 function PositionSizeCalculator() {
-    const [capital, setCapital] = useState<number>(100_000_000);
-    const [riskPercent, setRiskPercent] = useState<number>(2);
+    const { capital: globalCapital, riskPercentage: globalRisk } = useSettings();
+    const [capital, setCapital] = useState<number>(globalCapital);
+    const [riskPercent, setRiskPercent] = useState<number>(globalRisk);
+
+    // Sync with global settings when they change
+    useEffect(() => {
+        setCapital(globalCapital);
+        setRiskPercent(globalRisk);
+    }, [globalCapital, globalRisk]);
     const [entryPrice, setEntryPrice] = useState<number>(5000);
     const [stopLossPrice, setStopLossPrice] = useState<number>(4900);
 
@@ -202,7 +210,7 @@ function PositionSizeCalculator() {
                 <h3 className="text-lg font-semibold text-white">Position Size Calculator</h3>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                 <InputField
                     label="Capital (IDR)"
                     value={capital}
@@ -311,7 +319,7 @@ function RiskRewardAnalyzer() {
                 <h3 className="text-lg font-semibold text-white">Risk:Reward Analyzer</h3>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                 <InputField
                     label="Entry"
                     value={entryPrice}
@@ -387,7 +395,13 @@ function RiskRewardAnalyzer() {
 // ============================================================================
 
 function PortfolioRiskMonitor() {
-    const [capital, setCapital] = useState<number>(100_000_000);
+    const { capital: globalCapital } = useSettings();
+    const [capital, setCapital] = useState<number>(globalCapital);
+
+    // Sync with global settings
+    useEffect(() => {
+        setCapital(globalCapital);
+    }, [globalCapital]);
     const [positions, setPositions] = useState<Position[]>([
         { id: "1", symbol: "BBCA", shares: 500, entryPrice: 9500, stopLoss: 9200, currentPrice: 9600 },
         { id: "2", symbol: "BBRI", shares: 1000, entryPrice: 5200, stopLoss: 5000, currentPrice: 5150 },
@@ -470,7 +484,7 @@ function PortfolioRiskMonitor() {
             )}
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 <ResultCard
                     label="Total Exposure"
                     value={formatRupiah(portfolioMetrics.totalExposure)}

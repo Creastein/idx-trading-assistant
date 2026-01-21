@@ -43,8 +43,10 @@ interface Indicators {
 }
 
 interface TechnicalIndicatorsPanelProps {
-    indicators: Indicators;
+    indicators: Indicators | null;
     currentPrice: number;
+    error?: string | null;
+    isLoading?: boolean;
 }
 
 // ============================================================================
@@ -312,13 +314,93 @@ const SMACard = ({ sma20, currentPrice }: { sma20: number | null; currentPrice: 
 // Main Component
 // ============================================================================
 
-export function TechnicalIndicatorsPanel({ indicators, currentPrice }: TechnicalIndicatorsPanelProps) {
+export function TechnicalIndicatorsPanel({
+    indicators,
+    currentPrice,
+    error,
+    isLoading = false
+}: TechnicalIndicatorsPanelProps) {
+
+    // Error state
+    if (error) {
+        return (
+            <div className="w-full">
+                <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    📊 Technical Indicators
+                </h2>
+                <div className="p-6 border-2 border-red-500/50 bg-red-500/10 rounded-lg">
+                    <div className="flex items-start gap-3">
+                        <span className="text-3xl">⚠️</span>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-red-400 text-lg mb-2">
+                                Error Loading Technical Indicators
+                            </h3>
+                            <p className="text-sm text-red-300 mb-3">{error}</p>
+                            <div className="text-xs text-red-400/70 mb-4">
+                                <p>Possible causes:</p>
+                                <ul className="list-disc list-inside mt-1 space-y-1">
+                                    <li>Insufficient historical data for this stock</li>
+                                    <li>Data provider (Yahoo Finance) temporary issue</li>
+                                    <li>Stock symbol may be invalid or delisted</li>
+                                </ul>
+                            </div>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded text-sm font-medium transition-colors text-red-300"
+                            >
+                                🔄 Retry
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="w-full">
+                <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    📊 Technical Indicators
+                    <span className="inline-block w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></span>
+                </h2>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} className="bg-gray-900 border border-gray-800 p-4 rounded-lg animate-pulse">
+                            <div className="h-3 bg-gray-700 rounded w-20 mb-3"></div>
+                            <div className="h-8 bg-gray-700 rounded w-16 mb-2"></div>
+                            <div className="h-2 bg-gray-700 rounded w-24"></div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    // No data state (different from error)
+    if (!indicators) {
+        return (
+            <div className="w-full">
+                <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    📊 Technical Indicators
+                </h2>
+                <div className="p-8 text-center border border-gray-800 rounded-lg bg-gray-900/50">
+                    <span className="text-4xl mb-3 block">📈</span>
+                    <p className="text-gray-400">Select a stock to view technical indicators</p>
+                    <p className="text-xs text-gray-500 mt-2">Enter a ticker symbol above (e.g., BBRI, BBCA, TLKM)</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Normal render with indicators data
     return (
         <div className="w-full">
             <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
                 📊 Technical Indicators
             </h2>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                 <RSICard rsi={indicators.rsi} />
                 <MACDCard macd={indicators.macd} />
                 <BollingerBandsCard bb={indicators.bollingerBands} currentPrice={currentPrice} />

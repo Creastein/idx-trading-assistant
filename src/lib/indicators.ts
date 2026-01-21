@@ -232,6 +232,12 @@ export function calculateRSI(prices: number[], period: number = 14): IndicatorRe
 
     const current = values[values.length - 1];
 
+    // Validate result
+    if (isNaN(current) || !isFinite(current)) {
+        console.error('[RSI] Calculation produced invalid result:', current);
+        return null;
+    }
+
     // Signal determination
     let signal: Signal = 'NEUTRAL';
     if (current < 30) signal = 'BUY';      // Oversold
@@ -240,6 +246,7 @@ export function calculateRSI(prices: number[], period: number = 14): IndicatorRe
     // Strength: how far from neutral (50)
     const strength = Math.abs(current - 50) * 2;
 
+    console.log(`[RSI] Calculated: ${current.toFixed(2)}, Signal: ${signal}`);
     return { values, current, signal, strength };
 }
 
@@ -319,14 +326,26 @@ export function calculateMACD(
         else if (prevHist > 0 && currentHist <= 0) crossover = 'BEARISH';
     }
 
+    const currentMACD = macdLine[macdLine.length - 1];
+    const currentSignal = signalLine[signalLine.length - 1];
+    const currentHistogram = histogram[histogram.length - 1];
+
+    // Validate result
+    if (isNaN(currentMACD) || isNaN(currentSignal) || isNaN(currentHistogram)) {
+        console.error('[MACD] Calculation produced invalid result');
+        return null;
+    }
+
+    console.log(`[MACD] Calculated: MACD=${currentMACD.toFixed(2)}, Signal=${currentSignal.toFixed(2)}, Crossover=${crossover}`);
+
     return {
         macdLine,
         signalLine,
         histogram,
         current: {
-            macd: macdLine[macdLine.length - 1],
-            signal: signalLine[signalLine.length - 1],
-            histogram: histogram[histogram.length - 1],
+            macd: currentMACD,
+            signal: currentSignal,
+            histogram: currentHistogram,
         },
         crossover,
     };
@@ -393,6 +412,12 @@ export function calculateBollingerBands(
     const currentLower = lower[lower.length - 1];
     const currentPrice = data[data.length - 1];
 
+    // Validate result
+    if (isNaN(currentUpper) || isNaN(currentMiddle) || isNaN(currentLower)) {
+        console.error('[BB] Calculation produced invalid result');
+        return null;
+    }
+
     // Bandwidth: percentage difference between bands
     const bandwidth = ((currentUpper - currentLower) / currentMiddle) * 100;
 
@@ -403,6 +428,8 @@ export function calculateBollingerBands(
 
     if (positionInBand < 0.2) signal = 'BUY';       // Near lower band
     else if (positionInBand > 0.8) signal = 'SELL'; // Near upper band
+
+    console.log(`[BB] Calculated: Upper=${currentUpper.toFixed(2)}, Middle=${currentMiddle.toFixed(2)}, Lower=${currentLower.toFixed(2)}, Signal=${signal}`);
 
     return {
         upper,
@@ -499,12 +526,47 @@ export function performTechnicalAnalysis(
     prices: number[],
     volumes: number[]
 ): TechnicalAnalysisResult {
-    const rsi = calculateRSI(prices);
-    const macd = calculateMACD(prices);
-    const bollingerBands = calculateBollingerBands(prices);
-    const sma20 = calculateSMA(prices, 20);
-    const ema12 = calculateEMA(prices, 12);
-    const volume = analyzeVolume(volumes);
+    // Input validation
+    if (!prices || !Array.isArray(prices)) {
+        throw new Error('Invalid input: prices must be an array');
+    }
+
+    if (prices.length === 0) {
+        throw new Error('No price data provided');
+    }
+
+    // Filter invalid values
+    const validPrices = prices.filter(p =>
+        typeof p === 'number' && !isNaN(p) && isFinite(p) && p > 0
+    );
+
+    if (validPrices.length < 20) {
+        throw new Error(
+            `Insufficient valid data points: ${validPrices.length} found, 20 minimum required. ` +
+            `Original array had ${prices.length} elements.`
+        );
+    }
+
+    if (validPrices.length < 50) {
+        console.warn(
+            `[Indicators] Warning: Only ${validPrices.length} data points. ` +
+            `Some indicators (EMA50) may be less accurate.`
+        );
+    }
+
+    console.log(`[Indicators] Processing ${validPrices.length} valid price points`);
+
+    // Validate volumes if provided
+    const validVolumes = volumes?.filter(v =>
+        typeof v === 'number' && !isNaN(v) && isFinite(v) && v >= 0
+    ) || [];
+
+    const rsi = calculateRSI(validPrices);
+    const macd = calculateMACD(validPrices);
+    const bollingerBands = calculateBollingerBands(validPrices);
+    const sma20 = calculateSMA(validPrices, 20);
+    const ema12 = calculateEMA(validPrices, 12);
+    const volume = validVolumes.length >= 20 ? analyzeVolume(validVolumes) : null;
 
     // Calculate overall signal based on all indicators
     let buyScore = 0;

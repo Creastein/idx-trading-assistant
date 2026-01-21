@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import MainChartPanel from "@/components/MainChartPanel";
 import AnalysisSidebar from "@/components/AnalysisSidebar";
@@ -9,7 +9,11 @@ import SidebarNavigation from "@/components/SidebarNavigation";
 import { TechnicalIndicatorsPanel } from "@/components/TechnicalIndicatorsPanel";
 import { TradingSignalsPanel } from "@/components/TradingSignalsPanel";
 import { LoadingOverlay } from "@/components/LoadingSpinner";
+import MultiTimeframePanel from "@/components/MultiTimeframePanel";
 import { StockData, TradingMode, EnhancedStockData } from "@/lib/types";
+import type { MultiTimeframeAnalysis } from "@/lib/multiTimeframeAnalysis";
+import { SettingsDialog } from "@/components/SettingsDialog";
+import { StockSearch } from "@/components/StockSearch";
 
 // ============================================================================
 // Helper: Fetch Enhanced Stock Data
@@ -60,6 +64,11 @@ export default function Home() {
   const [isAnalyzingText, setIsAnalyzingText] = useState(false);
   const [textAnalysis, setTextAnalysis] = useState<string | null>(null);
 
+  // Multi-Timeframe Analysis State
+  const [mtfAnalysis, setMtfAnalysis] = useState<MultiTimeframeAnalysis | null>(null);
+  const [isLoadingMTF, setIsLoadingMTF] = useState(false);
+  const [mtfLastUpdated, setMtfLastUpdated] = useState<number | null>(null);
+
   // ============================================================================
   // Load Stock Data (Enhanced)
   // ============================================================================
@@ -88,55 +97,32 @@ export default function Home() {
         throw new Error(result.error || "Failed to fetch stock data");
       }
 
-      // API returns flat StockData structure
-      const data = result.data as StockData;
+      // API now returns EnhancedStockData directly
+      const enhancedResponse = result.data as EnhancedStockData;
 
-      // Set legacy stockData directly
-      setStockData(data);
-
-      // Create enhanced data with proper nested structure for indicator panels
-      // Note: Current API doesn't return indicators, so we set them to null
-      setEnhancedData({
-        symbol: data.symbol,
-        name: data.name,
-        quote: {
-          price: data.price,
-          change: data.change,
-          changePercent: data.changePercent,
-          volume: data.volume || 0,
-          marketCap: data.marketCap || null,
-          pe: data.pe || null,
-          pb: data.pb || null,
-          sector: null,
-          previousClose: data.previousClose || 0,
-          dayHigh: data.dayHigh || data.price,
-          dayLow: data.dayLow || data.price,
-        },
-        indicators: {
-          rsi: null,
-          macd: null,
-          bollingerBands: null,
-          ema20: null,
-          ema50: null,
-          sma20: null,
-          volumeAnalysis: null,
-        },
-        signals: [],
-        supportResistance: {
-          support: [],
-          resistance: [],
-        },
-        atr: 0,
-        recommendation: {
-          action: "HOLD",
-          confidence: 0,
-          reasoning: ["Insufficient data"],
-        },
+      // Set legacy stockData for backward compatibility
+      setStockData({
+        symbol: enhancedResponse.symbol,
+        name: enhancedResponse.name,
+        price: enhancedResponse.quote.price,
+        currency: "IDR",
+        change: enhancedResponse.quote.change,
+        changePercent: enhancedResponse.quote.changePercent,
+        volume: enhancedResponse.quote.volume,
+        marketCap: enhancedResponse.quote.marketCap || undefined,
+        pe: enhancedResponse.quote.pe || undefined,
+        pb: enhancedResponse.quote.pb || undefined,
+        previousClose: enhancedResponse.quote.previousClose,
+        dayHigh: enhancedResponse.quote.dayHigh,
+        dayLow: enhancedResponse.quote.dayLow,
       });
+
+      // Use enhanced data directly from API (with indicators!)
+      setEnhancedData(enhancedResponse);
 
       setActiveSymbol(symbol.trim().toUpperCase());
       toast.success(`Data ${symbol.toUpperCase()} berhasil dimuat!`, {
-        description: `Harga: Rp ${data.price?.toLocaleString("id-ID") || "N/A"}`,
+        description: `Harga: Rp ${enhancedResponse.quote.price?.toLocaleString("id-ID") || "N/A"}`,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Terjadi kesalahan saat memuat data";
@@ -172,6 +158,62 @@ export default function Home() {
     await loadStock(ticker);
   };
 
+  // Auto-fetch MTF analysis when stock loads
+  const fetchMTFAnalysis = async (symbol: string, mode: "SCALPING" | "SWING") => {
+    if (!symbol) return;
+
+    setIsLoadingMTF(true);
+    try {
+      const response = await fetch("/api/analyze/multi-timeframe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol: symbol,
+          mode: mode
+        }),
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        setMtfAnalysis(result);
+        setMtfLastUpdated(Date.now());
+        console.log('[MTF] Analysis loaded:', result.confluence);
+        // Only show toast if it's a manual refresh or initial load, preventing spam if we add polling later
+        toast.success(`Analisis Multi-Timeframe Selesai`, {
+          description: `Konfluensi: ${result.confluence.direction} (${result.confluence.strength}%)`,
+        });
+      } else {
+        throw new Error(result.error || "Failed to fetch MTF analysis");
+      }
+    } catch (err) {
+      console.error('[MTF] Failed to fetch analysis:', err);
+      toast.error("Gagal memuat analisis Multi-Timeframe", {
+        description: err instanceof Error ? err.message : "Terjadi kesalahan sistem"
+      });
+    } finally {
+      setIsLoadingMTF(false);
+    }
+  };
+
+  const handleRefreshAnalysis = async () => {
+    if (!activeSymbol || !tradingMode) return;
+
+    // Refresh both stock data and MTF
+    toast.info("Menyegarkan data...");
+    await Promise.all([
+      loadStock(activeSymbol),
+      fetchMTFAnalysis(activeSymbol, tradingMode)
+    ]);
+  };
+
+  // Auto-trigger MTF when stock data loads
+  useEffect(() => {
+    if (enhancedData && activeSymbol && tradingMode) {
+      console.log('[MTF] Auto-triggering analysis for', activeSymbol);
+      fetchMTFAnalysis(activeSymbol, tradingMode);
+    }
+  }, [enhancedData?.symbol, tradingMode]); // Trigger when symbol or mode changes
+
   const handleAnalyzeText = async () => {
     if (!stockData || !tradingMode) return;
     setIsAnalyzingText(true);
@@ -182,11 +224,18 @@ export default function Home() {
         body: JSON.stringify({
           type: "text",
           data: enhancedData || stockData,
-          mode: tradingMode
+          mode: tradingMode,
+          symbol: activeSymbol || stockData.symbol
         }),
       });
       const result = await response.json();
-      if (response.ok) setTextAnalysis(result.analysis);
+      if (response.ok) {
+        setTextAnalysis(result.analysis);
+        // MTF is now auto-triggered, but update if response includes it
+        if (result.mtfAnalysis && !mtfAnalysis) {
+          setMtfAnalysis(result.mtfAnalysis);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -200,12 +249,12 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-terminal-bg flex h-screen overflow-hidden">
+    <div className="min-h-[100dvh] bg-terminal-bg flex flex-col md:flex-row h-[100dvh] overflow-hidden user-select-none">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden mr-14">
+      <div className="flex-1 flex flex-col overflow-hidden mr-0 md:mr-14 pb-16 md:pb-0">
         {/* Header - Borderless & Seamless */}
-        <header className="bg-background/50 backdrop-blur-md sticky top-0 z-50 shrink-0">
-          <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-6">
+        <header className="bg-background/50 backdrop-blur-md sticky top-0 z-30 shrink-0 border-b border-border/10">
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-3 lg:gap-6">
 
             {/* Brand (No Back Button) */}
             <div className="flex items-center gap-3 shrink-0">
@@ -227,52 +276,36 @@ export default function Home() {
                     onClick={() => setTradingMode(null)}
                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${tradingMode === 'SCALPING' ? 'bg-profit/10 text-profit' : 'bg-chart-2/10 text-chart-2'} hover:bg-muted transition-colors`}
                   >
-                    {tradingMode === 'SCALPING' ? '⚡ SCALPING MODE' : '🌊 SWING MODE'}
+                    {tradingMode === 'SCALPING' ? '⚡ SCALPING' : '🌊 SWING'}
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Search Bar - Seamless Integration */}
-            <form onSubmit={handleSearch} className="flex-1 max-w-md relative group">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-muted-foreground group-focus-within:text-primary transition-colors">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                value={ticker}
-                onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                placeholder="Cari Ticker (cth: BBRI)..."
-                className="w-full bg-secondary/30 hover:bg-secondary/50 focus:bg-background border-none rounded-full py-2 pl-10 pr-12 text-sm transition-all shadow-sm focus:shadow-md focus:ring-1 focus:ring-primary/20 placeholder:text-muted-foreground/50"
+            <div className="flex-1 max-w-md">
+              <StockSearch
+                onSelect={(symbol) => loadStock(symbol)}
+                isLoading={isLoading}
+                initialValue={ticker}
               />
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:bg-background hover:text-primary transition-all disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  <span className="text-[10px] font-bold opacity-0 group-focus-within:opacity-100 transition-opacity">↵</span>
-                )}
-              </button>
-            </form>
+            </div>
+
+            {/* Trading Mode & Settings */}
+            <div className="flex items-center gap-2 lg:gap-3">
+              <SettingsDialog />
+            </div>
 
             {/* Key Stats Inline */}
             {stockData && (
               <div className="hidden lg:flex items-center gap-6 pl-6 animate-in slide-in-from-right-4 fade-in duration-500">
                 <div>
-                  <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Harga Terakhir</span>
+                  <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Last Price</span>
                   <span className="text-lg font-mono font-bold text-foreground tracking-tight">{stockData.price?.toLocaleString("id-ID") || "N/A"}</span>
                 </div>
                 <div className="h-8 w-px bg-border/30"></div>
                 <div>
-                  <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Perubahan</span>
+                  <span className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground block">Change</span>
                   <span className={`text-lg font-mono font-bold tracking-tight ${(stockData.change || 0) >= 0 ? "text-profit" : "text-loss"}`}>
                     {(stockData.change || 0) >= 0 ? "+" : ""}{(stockData.changePercent || 0).toFixed(2)}%
                   </span>
@@ -312,25 +345,66 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Technical Indicators & Signals Grid (Below Chart) */}
-              {enhancedData && (
-                <div className="flex-shrink-0 p-4 border-t border-border/10 bg-background/30">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Technical Indicators Panel */}
-                    <TechnicalIndicatorsPanel
-                      indicators={enhancedData.indicators}
-                      currentPrice={enhancedData.quote.price}
-                    />
+              {/* Technical Indicators & Signals Grid (Below Chart) - Always render to show states */}
+              <div className="flex-shrink-0 p-4 border-t border-border/10 bg-background/30">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Technical Indicators Panel */}
+                  <TechnicalIndicatorsPanel
+                    indicators={enhancedData?.indicators || null}
+                    currentPrice={enhancedData?.quote.price || 0}
+                    error={error}
+                    isLoading={isLoading}
+                  />
 
-                    {/* Trading Signals Panel */}
+                  {/* Trading Signals Panel */}
+                  {enhancedData && (
                     <TradingSignalsPanel
                       signals={enhancedData.signals}
                       recommendation={enhancedData.recommendation}
                       isLoading={isLoading}
                     />
-                  </div>
+                  )}
                 </div>
-              )}
+
+                {/* Multi-Timeframe Confluence Analysis */}
+                {(mtfAnalysis || isLoadingMTF) && (
+                  <div className="mt-8 pt-6 border-t border-border/10">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-300 uppercase tracking-wider">
+                          ⏱️ Multi-Timeframe
+                        </span>
+                        {mtfLastUpdated && !isLoadingMTF && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">
+                            Updated {Math.floor((Date.now() - mtfLastUpdated) / 60000)}m ago
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={handleRefreshAnalysis}
+                        disabled={isLoadingMTF}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary text-foreground transition-colors disabled:opacity-50"
+                      >
+                        <svg className={`w-3.5 h-3.5 ${isLoadingMTF ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh Analysis
+                      </button>
+                    </div>
+
+                    {isLoadingMTF ? (
+                      <div className="p-12 text-center border border-dashed border-gray-800 rounded-lg bg-gray-900/30">
+                        <div className="inline-block w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p className="text-gray-400 font-mono text-sm">Analyzing multiple timeframes...</p>
+                        <p className="text-gray-600 text-xs mt-2">Checking {tradingMode === "SCALPING" ? "1m, 5m, 15m, 1h" : "1h, 4h, 1d, 1w"} charts</p>
+                      </div>
+                    ) : (
+                      <MultiTimeframePanel analysis={mtfAnalysis} />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Sidebar Tools (Collapsible) */}

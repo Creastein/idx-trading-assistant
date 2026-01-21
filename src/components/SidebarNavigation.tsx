@@ -17,7 +17,7 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
         {
             id: "mode",
             icon: tradingMode === 'SCALPING' ? "⚡" : "🌊",
-            label: tradingMode === 'SCALPING' ? "Scalping Mode" : "Swing Mode",
+            label: tradingMode === 'SCALPING' ? "Scalping" : "Swing",
             badge: tradingMode,
             color: tradingMode === 'SCALPING' ? "text-profit" : "text-chart-2",
             onClick: () => { }
@@ -29,7 +29,7 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
         {
             id: "chart",
             icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
             ),
@@ -40,45 +40,45 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
         {
             id: "fundamental",
             icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
             ),
-            label: "Fundamental",
+            label: "Fund.",
             active: activeTab === "fundamentals",
             onClick: () => onTabChange("fundamentals")
         },
         {
             id: "news",
             icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                 </svg>
             ),
-            label: "Radar Berita",
+            label: "News",
             active: activeTab === "news",
             onClick: () => onTabChange("news")
         },
         {
             id: "ai-vision",
             icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
             ),
-            label: "AI Vision",
+            label: "Vision",
             active: activeTab === "vision",
             onClick: () => onTabChange("vision")
         },
         {
             id: "risk",
             icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
             ),
-            label: "Risiko",
+            label: "Risk",
             active: activeTab === "risk",
             onClick: () => onTabChange("risk")
         },
@@ -89,11 +89,11 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
         {
             id: "back",
             icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
             ),
-            label: "Kembali ke Mode Selection",
+            label: "Back",
             color: "text-muted-foreground hover:text-foreground",
             onClick: onBackToModeSelection
         }
@@ -101,14 +101,14 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
 
     return (
         <>
-            {/* Sidebar */}
+            {/* Desktop Sidebar (Right) */}
             <div
-                className={`fixed right-0 top-0 h-full bg-card border-l border-border z-40 transition-all duration-300 ${isExpanded ? "w-56" : "w-14"
+                className={`hidden md:block fixed right-0 top-0 h-full bg-card border-l border-border z-40 transition-all duration-300 ${isExpanded ? "w-56" : "w-14"
                     }`}
                 onMouseEnter={() => setIsExpanded(true)}
                 onMouseLeave={() => setIsExpanded(false)}
             >
-                {/* Top Spacer (No Logo) */}
+                {/* Top Spacer */}
                 <div className="h-16 flex items-center justify-center border-b border-border/50">
                     <div className="w-8 h-8 flex items-center justify-center text-muted-foreground/20">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,13 +145,6 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
                                         {item.label}
                                     </span>
                                 )}
-
-                                {isExpanded && item.badge && (
-                                    <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded ${item.badge === 'SCALPING' ? 'bg-profit/10 text-profit' : 'bg-chart-2/10 text-chart-2'
-                                        }`}>
-                                        {item.badge}
-                                    </span>
-                                )}
                             </button>
                         );
                     })}
@@ -167,8 +160,26 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
                 )}
             </div>
 
-            {/* Spacer to prevent content overlap */}
-            <div className={`transition-all duration-300 ${isExpanded ? "w-56" : "w-14"}`} />
+            {/* Mobile Bottom Navigation */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/95 backdrop-blur-md border-t border-border/20 z-50 flex items-center justify-around px-2 pb-safe">
+                {menuItems.filter(i => i.type !== 'divider' && i.id !== 'mode').slice(0, 5).map((item) => (
+                    <button
+                        key={item.id}
+                        onClick={item.onClick}
+                        className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all ${item.active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                            }`}
+                    >
+                        <span className="w-5 h-5">
+                            {typeof item.icon === "string" ? item.icon : item.icon}
+                        </span>
+                        <span className="text-[10px] font-medium">{item.label}</span>
+                    </button>
+                ))}
+                {/* Mobile Menu Button (Hamburger) for extras could go here if needed */}
+            </div>
+
+            {/* Spacer for Desktop Layout */}
+            <div className={`hidden md:block transition-all duration-300 ${isExpanded ? "w-56" : "w-14"}`} />
         </>
     );
 }

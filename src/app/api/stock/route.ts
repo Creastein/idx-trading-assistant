@@ -64,7 +64,8 @@ interface ChartResult {
 // Cache Implementation
 // ============================================================================
 
-const cache = new Map<string, { data: StockData; timestamp: number }>();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const cache = new Map<string, { data: Record<string, any>; timestamp: number }>();
 const CACHE_DURATION_SCALPING = 5 * 60 * 1000; // 5 minutes
 const CACHE_DURATION_SWING = 60 * 60 * 1000; // 1 hour
 
@@ -346,41 +347,51 @@ function generateRecommendation(
 // ============================================================================
 
 export async function POST(request: NextRequest) {
+    const ticker = "unknown";
+    const mode = "scalping";
+
     try {
         const body = await request.json();
         const symbol = body.symbol || body.ticker;
-        const mode = body.mode || "scalping";
+        const requestMode = body.mode || "scalping";
+
+        console.log('[Stock API] Request received:', { ticker: symbol, mode: requestMode });
 
         if (!symbol || typeof symbol !== "string") {
             return NextResponse.json({ error: "Symbol is required" }, { status: 400 });
         }
 
         const normalizedSymbol = symbol.toUpperCase().replace(".JK", "");
-        const cacheKey = `${normalizedSymbol}-${mode}`;
-        const cacheDuration = mode === "scalping" ? CACHE_DURATION_SCALPING : CACHE_DURATION_SWING;
+        const cacheKey = `${normalizedSymbol}-${requestMode}`;
+        const cacheDuration = requestMode === "scalping" ? CACHE_DURATION_SCALPING : CACHE_DURATION_SWING;
 
         // Check cache
         const cached = cache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < cacheDuration) {
+            console.log('[Stock API] Returning cached data for:', cacheKey);
             return NextResponse.json({ success: true, data: cached.data });
         }
 
         const symbolWithSuffix = `${normalizedSymbol}.JK`;
+        console.log('[Stock API] Fetching symbol:', symbolWithSuffix);
 
         // Fetch quote data
         const quote = await yahooFinance.quote(symbolWithSuffix) as QuoteResult;
 
         if (!quote || !quote.regularMarketPrice) {
+            console.error('[Stock API] Quote not found:', symbolWithSuffix);
             return NextResponse.json(
                 { error: `Stock ${symbolWithSuffix} not found or no data available` },
                 { status: 404 }
             );
         }
 
-        // Fetch historical data
-        const daysBack = mode === "scalping" ? 30 : 90;
+        // Fetch historical data - increased period for proper indicator calculation
+        const daysBack = requestMode === "scalping" ? 30 : 90;
         const endDate = new Date();
         const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
+
+        console.log('[Stock API] Fetching historical data:', { daysBack, startDate: startDate.toISOString(), endDate: endDate.toISOString() });
 
         let historicalData: HistoricalQuote[] = [];
         try {
@@ -390,20 +401,53 @@ export async function POST(request: NextRequest) {
                 interval: "1d",
             }) as ChartResult;
             historicalData = chartResult.quotes;
-        } catch {
-            // Fallback: use only quote data if historical fails
-            console.warn("Historical data fetch failed, using limited data");
+            console.log('[Stock API] Historical data points:', historicalData.length);
+        } catch (histError: unknown) {
+            const histErrorMessage = histError instanceof Error ? histError.message : 'Unknown error';
+            console.error('[Stock API] Historical data fetch failed:', histErrorMessage);
+            // Continue with limited data instead of failing completely
         }
 
-        // Extract price and volume arrays
+        // Validate we have minimum required data
+        if (!historicalData || historicalData.length < 20) {
+            console.error('[Stock API] Insufficient data:', historicalData?.length || 0);
+            return NextResponse.json({
+                error: 'Insufficient historical data',
+                details: `Only ${historicalData?.length || 0} data points available. Need minimum 20.`,
+                suggestion: 'This stock may have limited trading history. Try BBCA, BBRI, or TLKM.'
+            }, { status: 400 });
+        }
+
+        // Extract price arrays with detailed logging for invalid values
         const closes = historicalData
             .map((q) => q.close)
-            .filter((c): c is number => c != null);
+            .filter((c): c is number => {
+                const isValid = c !== null && c !== undefined && !isNaN(c) && c > 0;
+                if (!isValid && c !== null && c !== undefined) {
+                    console.warn('[Stock API] Invalid close price detected:', c);
+                }
+                return isValid;
+            });
+
         const volumes = historicalData
             .map((q) => q.volume)
-            .filter((v): v is number => v != null);
+            .filter((v): v is number => {
+                const isValid = v !== null && v !== undefined && !isNaN(v) && v >= 0;
+                return isValid;
+            });
 
-        // Perform technical analysis (only if we have enough data)
+        console.log(`[Stock API] Filtered ${closes.length} valid prices from ${historicalData.length} quotes`);
+
+        // Validate we have enough valid close prices
+        if (closes.length < 20) {
+            console.error('[Stock API] Insufficient valid prices after filtering:', closes.length);
+            return NextResponse.json({
+                error: 'Insufficient valid price data',
+                details: `Only ${closes.length} valid close prices found after filtering. Need minimum 20.`
+            }, { status: 400 });
+        }
+
+        // Perform technical analysis with try-catch
         let analysis: TechnicalAnalysisResult | null = null;
         let volumeAnalysisResult: VolumeAnalysisResult | null = null;
         let ema20Result: IndicatorResult | null = null;
@@ -411,11 +455,55 @@ export async function POST(request: NextRequest) {
         let sma20Result: IndicatorResult | null = null;
 
         if (closes.length >= 26) {
-            analysis = performTechnicalAnalysis(closes, volumes);
-            volumeAnalysisResult = analyzeVolume(volumes);
-            ema20Result = calculateEMA(closes, 20);
-            ema50Result = calculateEMA(closes, 50);
-            sma20Result = calculateSMA(closes, 20);
+            try {
+                analysis = performTechnicalAnalysis(closes, volumes);
+                console.log('[Stock API] ✓ Technical analysis completed:', {
+                    rsi: analysis?.rsi?.current,
+                    macdLine: analysis?.macd?.current?.macd,
+                    bbUpper: analysis?.bollingerBands?.current?.upper
+                });
+            } catch (analysisError: unknown) {
+                const analysisErrorMessage = analysisError instanceof Error ? analysisError.message : 'Unknown error';
+                console.error('[Stock API] ✗ Technical analysis failed:', analysisErrorMessage);
+                return NextResponse.json({
+                    error: 'Failed to calculate technical indicators',
+                    details: analysisErrorMessage,
+                    closes_count: closes.length
+                }, { status: 500 });
+            }
+
+            try {
+                volumeAnalysisResult = analyzeVolume(volumes);
+                console.log('[Stock API] ✓ Volume analysis completed');
+            } catch (volError: unknown) {
+                const volErrorMessage = volError instanceof Error ? volError.message : 'Unknown error';
+                console.error('[Stock API] ✗ Volume analysis failed:', volErrorMessage);
+                // Provide fallback instead of failing completely
+                volumeAnalysisResult = {
+                    currentVolume: volumes[volumes.length - 1] || 0,
+                    averageVolume: volumes.reduce((a, b) => a + b, 0) / volumes.length || 0,
+                    volumeRatio: 1,
+                    isSpike: false,
+                    signal: 'NORMAL' as const
+                };
+            }
+
+            try {
+                ema20Result = calculateEMA(closes, 20);
+                ema50Result = calculateEMA(closes, 50);
+                sma20Result = calculateSMA(closes, 20);
+                console.log('[Stock API] ✓ Moving averages calculated:', {
+                    ema20: ema20Result?.current,
+                    ema50: ema50Result?.current,
+                    sma20: sma20Result?.current
+                });
+            } catch (maError: unknown) {
+                const maErrorMessage = maError instanceof Error ? maError.message : 'Unknown error';
+                console.error('[Stock API] ✗ Moving average calculation failed:', maErrorMessage);
+                // Continue without MAs - not critical
+            }
+        } else {
+            console.warn('[Stock API] Not enough data for full analysis. Have:', closes.length, 'Need: 26');
         }
 
         // Calculate ATR and support/resistance
@@ -440,31 +528,82 @@ export async function POST(request: NextRequest) {
             recommendation = generateRecommendation(signals, analysis);
         }
 
-        // Build response - flatten structure to match StockData interface
-        const response: StockData = {
+        // Build response - return EnhancedStockData with all indicators
+        const response = {
             symbol: normalizedSymbol,
             name: quote.longName || quote.shortName || normalizedSymbol,
-            price: currentPrice,
-            currency: "IDR",
-            change: quote.regularMarketChange || 0,
-            changePercent: quote.regularMarketChangePercent || 0,
-            volume: quote.regularMarketVolume || 0,
-            marketCap: quote.marketCap || undefined,
-            pe: quote.trailingPE || undefined,
-            pb: quote.priceToBook || undefined,
-            previousClose: quote.regularMarketPreviousClose || 0,
-            dayHigh: quote.regularMarketDayHigh || currentPrice,
-            dayLow: quote.regularMarketDayLow || currentPrice,
+            quote: {
+                price: currentPrice,
+                change: quote.regularMarketChange || 0,
+                changePercent: quote.regularMarketChangePercent || 0,
+                volume: quote.regularMarketVolume || 0,
+                marketCap: quote.marketCap || null,
+                pe: quote.trailingPE || null,
+                pb: quote.priceToBook || null,
+                sector: null,
+                previousClose: quote.regularMarketPreviousClose || 0,
+                dayHigh: quote.regularMarketDayHigh || currentPrice,
+                dayLow: quote.regularMarketDayLow || currentPrice,
+            },
+            indicators: {
+                rsi: analysis?.rsi ? {
+                    value: analysis.rsi.current,
+                    interpretation: analysis.rsi.current < 30 ? "OVERSOLD" as const :
+                        analysis.rsi.current > 70 ? "OVERBOUGHT" as const : "NEUTRAL" as const
+                } : null,
+                macd: analysis?.macd ? {
+                    macd: analysis.macd.current.macd,
+                    signal: analysis.macd.current.signal,
+                    histogram: analysis.macd.current.histogram,
+                    crossover: analysis.macd.crossover
+                } : null,
+                bollingerBands: analysis?.bollingerBands ? {
+                    upper: analysis.bollingerBands.current.upper,
+                    middle: analysis.bollingerBands.current.middle,
+                    lower: analysis.bollingerBands.current.lower,
+                    bandwidth: analysis.bollingerBands.current.bandwidth,
+                    position: currentPrice > analysis.bollingerBands.current.upper ? "ABOVE_UPPER" as const :
+                        currentPrice < analysis.bollingerBands.current.lower ? "BELOW_LOWER" as const : "WITHIN" as const
+                } : null,
+                ema20: ema20Result?.current || null,
+                ema50: ema50Result?.current || null,
+                sma20: sma20Result?.current || null,
+                volumeAnalysis: volumeAnalysisResult ? {
+                    current: volumeAnalysisResult.currentVolume,
+                    average: volumeAnalysisResult.averageVolume,
+                    ratio: volumeAnalysisResult.volumeRatio,
+                    isSpike: volumeAnalysisResult.isSpike,
+                    trend: volumeAnalysisResult.volumeRatio > 1.2 ? "INCREASING" as const :
+                        volumeAnalysisResult.volumeRatio < 0.8 ? "DECREASING" as const : "STABLE" as const
+                } : null,
+            },
+            signals,
+            supportResistance,
+            atr,
+            recommendation,
         };
 
         // Update cache
         cache.set(cacheKey, { data: response, timestamp: Date.now() });
 
+        console.log('[Stock API] ✓ Response ready for:', normalizedSymbol, {
+            hasRSI: !!response.indicators.rsi,
+            hasMACD: !!response.indicators.macd,
+            hasBB: !!response.indicators.bollingerBands,
+            hasVolume: !!response.indicators.volumeAnalysis,
+            signalCount: signals.length
+        });
         return NextResponse.json({ success: true, data: response });
-    } catch (error) {
-        console.error("Stock API Error:", error);
+    } catch (error: unknown) {
+        const errorInstance = error instanceof Error ? error : new Error('Unknown error');
+        console.error('[Stock API] Fatal error:', {
+            message: errorInstance.message,
+            stack: errorInstance.stack,
+            ticker,
+            mode
+        });
 
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = errorInstance.message;
 
         if (errorMessage.includes("Not Found") || errorMessage.includes("no results")) {
             return NextResponse.json(
@@ -473,9 +612,13 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        return NextResponse.json(
-            { error: `Failed to fetch stock data: ${errorMessage}` },
-            { status: 500 }
-        );
+        return NextResponse.json({
+            error: 'Failed to fetch stock data',
+            details: errorMessage,
+            ticker,
+            mode,
+            timestamp: new Date().toISOString(),
+            ...(process.env.NODE_ENV === 'development' && { stack: errorInstance.stack })
+        }, { status: 500 });
     }
 }
