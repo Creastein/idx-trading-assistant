@@ -28,47 +28,59 @@ export default function AnalysisSidebar({
     onTabChange
 }: AnalysisSidebarProps) {
     return (
-        <div className="flex flex-col h-full bg-card/50 border-l border-border/50 overflow-hidden backdrop-blur-sm">
-            {/* Tabs Header */}
-            <div className="flex items-center border-b border-border bg-muted/40">
-                <button
-                    onClick={() => onTabChange("fundamentals")}
-                    className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "fundamentals"
-                        ? "border-primary text-primary bg-primary/5"
-                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                        }`}
-                >
-                    {tradingMode === 'SCALPING' ? 'KALKULATOR' : 'FUNDAMENTAL'}
-                </button>
-                <button
-                    onClick={() => onTabChange("risk")}
-                    className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "risk"
-                        ? "border-yellow-500 text-yellow-500 bg-yellow-500/5"
-                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                        }`}
-                >
-                    RISIKO
-                </button>
-                {/* News Tab - SWING MODE ONLY */}
-                {tradingMode === 'SWING' && (
+        <div className="flex flex-col h-full bg-card overflow-hidden">
+            {/* Tabs Header - Horizontal with Close Button */}
+            <div className="flex items-center justify-between gap-1 px-4 py-2 border-b border-border/50 bg-card">
+                <div className="flex items-center gap-1">
                     <button
-                        onClick={() => onTabChange("news")}
-                        className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "news"
-                            ? "border-purple-500 text-purple-500 bg-purple-500/5"
-                            : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                        onClick={() => onTabChange("fundamentals")}
+                        className={`px-4 py-2 text-xs font-mono font-semibold transition-all rounded-lg ${activeTab === "fundamentals"
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                             }`}
                     >
-                        BERITA
+                        {tradingMode === 'SCALPING' ? 'KALKULATOR' : 'FUNDAMENTAL'}
                     </button>
-                )}
+                    <button
+                        onClick={() => onTabChange("risk")}
+                        className={`px-4 py-2 text-xs font-mono font-semibold transition-all rounded-lg ${activeTab === "risk"
+                            ? "bg-yellow-500 text-yellow-950"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                            }`}
+                    >
+                        RISIKO
+                    </button>
+                    {/* News Tab - SWING MODE ONLY */}
+                    {tradingMode === 'SWING' && (
+                        <button
+                            onClick={() => onTabChange("news")}
+                            className={`px-4 py-2 text-xs font-mono font-semibold transition-all rounded-lg ${activeTab === "news"
+                                ? "bg-purple-500 text-purple-50"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                }`}
+                        >
+                            BERITA
+                        </button>
+                    )}
+                    <button
+                        onClick={() => onTabChange("vision")}
+                        className={`px-4 py-2 text-xs font-mono font-semibold transition-all rounded-lg ${activeTab === "vision"
+                            ? "bg-chart-2 text-chart-2-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                            }`}
+                    >
+                        AI
+                    </button>
+                </div>
+                {/* Close Button */}
                 <button
-                    onClick={() => onTabChange("vision")}
-                    className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "vision"
-                        ? "border-chart-2 text-chart-2 bg-chart-2/5"
-                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                        }`}
+                    onClick={() => onTabChange("chart")}
+                    className="p-1.5 hover:bg-muted/60 rounded transition-colors text-muted-foreground hover:text-foreground"
+                    title="Close panel"
                 >
-                    AI
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                 </button>
             </div>
 
@@ -76,7 +88,7 @@ export default function AnalysisSidebar({
             <div className="flex-1 overflow-hidden relative">
 
                 {/* Fundamentals / Calculator Tab */}
-                <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === "fundamentals" ? "opacity-100 z-10" : "opacity-0 pointer-events-none"}`}>
+                <div className={`absolute inset-0 transition-opacity duration-300 overflow-auto ${activeTab === "fundamentals" ? "opacity-100 z-10" : "opacity-0 pointer-events-none"}`}>
                     {tradingMode === 'SCALPING' ? (
                         <ScalpingCalculator currentPrice={stockData?.price || 0} />
                     ) : (
@@ -160,4 +172,3 @@ export default function AnalysisSidebar({
         </div>
     );
 }
-

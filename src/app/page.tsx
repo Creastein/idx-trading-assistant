@@ -37,7 +37,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"chart" | "fundamentals" | "news" | "vision" | "risk">("chart");
+  const [activeTab, setActiveTab] = useState<"chart" | "fundamentals" | "news" | "vision" | "risk">("fundamentals");
 
   // AI Text Analysis State
   const [isAnalyzingText, setIsAnalyzingText] = useState(false);
@@ -50,7 +50,7 @@ export default function Home() {
 
   // Reset active tab when trading mode changes to avoid orphaned tabs
   useEffect(() => {
-    setActiveTab('chart');
+    setActiveTab('fundamentals'); // Show bottom panel by default
   }, [tradingMode]);
 
   // ============================================================================
@@ -301,107 +301,104 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Main Content - Grid Layout */}
-        <main className="flex-1 p-0 overflow-hidden">
-          <div className="flex h-full">
+        {/* Main Content - Flex Column Layout */}
+        <main className="flex-1 p-0 overflow-hidden flex flex-col">
 
-            {/* Main Chart Area (Expandable) */}
-            <div className={`flex flex-col h-full transition-all duration-300 overflow-y-auto ${activeTab === 'chart' ? 'w-full' : 'hidden lg:flex lg:w-3/4'}`}>
+          {/* Main Chart Area (Full Width) */}
+          <div className="flex flex-col flex-1 overflow-y-auto">
 
-              {/* Loading State */}
-              {isLoading && (
-                <LoadingOverlay symbol={activeSymbol || "Loading..."} />
-              )}
+            {/* Loading State */}
+            {isLoading && (
+              <LoadingOverlay symbol={activeSymbol || "Loading..."} />
+            )}
 
-              {/* Chart (hidden during loading) */}
-              {!isLoading && (
-                <div className="flex-shrink-0" style={{ minHeight: '60%' }}>
-                  <MainChartPanel
-                    symbol={activeSymbol}
-                    tradingMode={tradingMode}
-                  />
-                </div>
-              )}
-
-              {/* Technical Indicators & Signals Grid (Below Chart) - Always render to show states */}
-              <div className="flex-shrink-0 p-4 border-t border-border/10 bg-background/30">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Technical Indicators Panel */}
-                  <TechnicalIndicatorsPanel
-                    indicators={enhancedData?.indicators || null}
-                    currentPrice={enhancedData?.quote.price || 0}
-                    error={error}
-                    isLoading={isLoading}
-                  />
-
-                  {/* Trading Signals Panel */}
-                  {enhancedData && (
-                    <TradingSignalsPanel
-                      signals={enhancedData.signals}
-                      recommendation={enhancedData.recommendation}
-                      isLoading={isLoading}
-                    />
-                  )}
-                </div>
-
-                {/* Multi-Timeframe Confluence Analysis */}
-                {(mtfAnalysis || isLoadingMTF) && (
-                  <div className="mt-8 pt-6 border-t border-border/10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-gray-300 uppercase tracking-wider">
-                          ⏱️ Multi-Timeframe
-                        </span>
-                        {mtfLastUpdated && !isLoadingMTF && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">
-                            Updated {Math.floor((Date.now() - mtfLastUpdated) / 60000)}m ago
-                          </span>
-                        )}
-                      </div>
-
-                      <button
-                        onClick={handleRefreshAnalysis}
-                        disabled={isLoadingMTF}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary text-foreground transition-colors disabled:opacity-50"
-                      >
-                        <svg className={`w-3.5 h-3.5 ${isLoadingMTF ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Refresh Analysis
-                      </button>
-                    </div>
-
-                    {isLoadingMTF ? (
-                      <div className="p-12 text-center border border-dashed border-gray-800 rounded-lg bg-gray-900/30">
-                        <div className="inline-block w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <p className="text-gray-400 font-mono text-sm">Analyzing multiple timeframes...</p>
-                        <p className="text-gray-600 text-xs mt-2">Checking {tradingMode === "SCALPING" ? "1m, 5m, 15m, 1h" : "1h, 4h, 1d, 1w"} charts</p>
-                      </div>
-                    ) : (
-                      <MultiTimeframePanel analysis={mtfAnalysis} />
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Sidebar Tools (Collapsible) */}
-            {activeTab !== 'chart' && (
-              <div className="w-full lg:w-1/4 h-full overflow-hidden flex flex-col animate-in slide-in-from-right-10 fade-in duration-300 bg-background/50 border-l border-border/10 backdrop-blur-sm">
-                <AnalysisSidebar
-                  ticker={activeSymbol || ""}
-                  stockData={stockData}
-                  onAnalyzeText={handleAnalyzeText}
-                  isAnalyzingText={isAnalyzingText}
-                  textAnalysis={textAnalysis}
+            {/* Chart (hidden during loading) */}
+            {!isLoading && (
+              <div className="flex-shrink-0" style={{ minHeight: '60%' }}>
+                <MainChartPanel
+                  symbol={activeSymbol}
                   tradingMode={tradingMode}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
                 />
               </div>
             )}
 
+            {/* Technical Indicators & Signals Grid (Below Chart) - Always render to show states */}
+            <div className="flex-shrink-0 p-4 border-t border-border/10 bg-background/30">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Technical Indicators Panel */}
+                <TechnicalIndicatorsPanel
+                  indicators={enhancedData?.indicators || null}
+                  currentPrice={enhancedData?.quote.price || 0}
+                  error={error}
+                  isLoading={isLoading}
+                />
+
+                {/* Trading Signals Panel - SCALPING ONLY */}
+                {enhancedData && tradingMode === 'SCALPING' && (
+                  <TradingSignalsPanel
+                    signals={enhancedData.signals}
+                    recommendation={enhancedData.recommendation}
+                    isLoading={isLoading}
+                  />
+                )}
+              </div>
+
+              {/* Multi-Timeframe Confluence Analysis - SWING ONLY */}
+              {(mtfAnalysis || isLoadingMTF) && tradingMode === 'SWING' && (
+                <div className="mt-8 pt-6 border-t border-border/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-300 uppercase tracking-wider">
+                        ⏱️ Multi-Timeframe
+                      </span>
+                      {mtfLastUpdated && !isLoadingMTF && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">
+                          Updated {Math.floor((Date.now() - mtfLastUpdated) / 60000)}m ago
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={handleRefreshAnalysis}
+                      disabled={isLoadingMTF}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary text-foreground transition-colors disabled:opacity-50"
+                    >
+                      <svg className={`w-3.5 h-3.5 ${isLoadingMTF ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Refresh Analysis
+                    </button>
+                  </div>
+
+                  {isLoadingMTF ? (
+                    <div className="p-12 text-center border border-dashed border-gray-800 rounded-lg bg-gray-900/30">
+                      <div className="inline-block w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <p className="text-gray-400 font-mono text-sm">Analyzing multiple timeframes...</p>
+                      <p className="text-gray-600 text-xs mt-2">Checking 1h, 4h, 1d, 1w charts</p>
+                    </div>
+                  ) : (
+                    <MultiTimeframePanel analysis={mtfAnalysis} />
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Floating Panel - Analysis Tools */}
+          {activeTab !== 'chart' && (
+            <div className="fixed bottom-4 right-4 w-[500px] max-w-[90vw] max-h-[70vh] z-50 rounded-lg shadow-2xl border border-border/50 bg-card overflow-hidden">
+              <AnalysisSidebar
+                ticker={activeSymbol || ""}
+                stockData={stockData}
+                onAnalyzeText={handleAnalyzeText}
+                isAnalyzingText={isAnalyzingText}
+                textAnalysis={textAnalysis}
+                tradingMode={tradingMode}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
+            </div>
+          )}
         </main>
       </div>
 

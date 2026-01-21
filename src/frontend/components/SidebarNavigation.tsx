@@ -104,19 +104,11 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
         <>
             {/* Desktop Sidebar (Left) */}
             <div
-                className={`hidden md:block fixed left-0 top-0 h-full bg-card border-r border-border z-40 transition-all duration-300 ${isExpanded ? "w-56" : "w-14"
+                className={`hidden md:block fixed left-0 top-16 h-[calc(100vh-4rem)] bg-card border-r border-border z-40 transition-all duration-300 ${isExpanded ? "w-56" : "w-14"
                     }`}
                 onMouseEnter={() => setIsExpanded(true)}
                 onMouseLeave={() => setIsExpanded(false)}
             >
-                {/* Top Spacer */}
-                <div className="h-16 flex items-center justify-center border-b border-border/50">
-                    <div className="w-8 h-8 flex items-center justify-center text-muted-foreground/20">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-                        </svg>
-                    </div>
-                </div>
 
                 {/* Menu Items */}
                 <nav className="py-4 px-2 space-y-1">
