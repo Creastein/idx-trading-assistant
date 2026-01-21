@@ -3,6 +3,7 @@
 import AIVisionPanel from "./AIVisionPanel";
 import NewsSentimentPanel from "./NewsSentimentPanel";
 import ScalpingCalculator from "./ScalpingCalculator";
+import RiskManagement from "./RiskManagement";
 import { StockData, TradingMode } from "@/lib/types";
 
 interface AnalysisSidebarProps {
@@ -12,8 +13,8 @@ interface AnalysisSidebarProps {
     isAnalyzingText: boolean;
     textAnalysis: string | null;
     tradingMode: TradingMode;
-    activeTab: "chart" | "fundamentals" | "news" | "vision";
-    onTabChange: (tab: "chart" | "fundamentals" | "news" | "vision") => void;
+    activeTab: "chart" | "fundamentals" | "news" | "vision" | "risk";
+    onTabChange: (tab: "chart" | "fundamentals" | "news" | "vision" | "risk") => void;
 }
 
 export default function AnalysisSidebar({
@@ -26,8 +27,6 @@ export default function AnalysisSidebar({
     activeTab,
     onTabChange
 }: AnalysisSidebarProps) {
-    // Internal state removed, using props instead
-
     return (
         <div className="flex flex-col h-full bg-card/50 border-l border-border/50 overflow-hidden backdrop-blur-sm">
             {/* Tabs Header */}
@@ -42,13 +41,22 @@ export default function AnalysisSidebar({
                     {tradingMode === 'SCALPING' ? 'KALKULATOR' : 'FUNDAMENTAL'}
                 </button>
                 <button
+                    onClick={() => onTabChange("risk")}
+                    className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "risk"
+                        ? "border-yellow-500 text-yellow-500 bg-yellow-500/5"
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                        }`}
+                >
+                    RISIKO
+                </button>
+                <button
                     onClick={() => onTabChange("news")}
                     className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "news"
                         ? "border-purple-500 text-purple-500 bg-purple-500/5"
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
                         }`}
                 >
-                    RADAR BERITA
+                    BERITA
                 </button>
                 <button
                     onClick={() => onTabChange("vision")}
@@ -57,7 +65,7 @@ export default function AnalysisSidebar({
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
                         }`}
                 >
-                    AI VISION
+                    AI
                 </button>
             </div>
 
@@ -130,6 +138,11 @@ export default function AnalysisSidebar({
                     )}
                 </div>
 
+                {/* Risk Management Tab */}
+                <div className={`absolute inset-0 transition-opacity duration-300 overflow-auto ${activeTab === "risk" ? "opacity-100 z-10" : "opacity-0 pointer-events-none"}`}>
+                    <RiskManagement />
+                </div>
+
                 {/* News Tab */}
                 <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === "news" ? "opacity-100 z-10" : "opacity-0 pointer-events-none"}`}>
                     <NewsSentimentPanel ticker={ticker} />
@@ -144,3 +157,4 @@ export default function AnalysisSidebar({
         </div>
     );
 }
+

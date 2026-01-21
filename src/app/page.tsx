@@ -1,52 +1,175 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import MainChartPanel from "@/components/MainChartPanel";
 import AnalysisSidebar from "@/components/AnalysisSidebar";
 import ModeSelectionScreen from "@/components/ModeSelectionScreen";
 import SidebarNavigation from "@/components/SidebarNavigation";
-import { StockData, TradingMode } from "@/lib/types";
+import { TechnicalIndicatorsPanel } from "@/components/TechnicalIndicatorsPanel";
+import { TradingSignalsPanel } from "@/components/TradingSignalsPanel";
+import { LoadingOverlay } from "@/components/LoadingSpinner";
+import { StockData, TradingMode, EnhancedStockData } from "@/lib/types";
 
+// ============================================================================
+// Helper: Fetch Enhanced Stock Data
+// ============================================================================
 
+async function fetchEnhancedStockData(
+  symbol: string,
+  mode: "scalping" | "swing"
+): Promise<EnhancedStockData> {
+  const response = await fetch("/api/stock", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticker: symbol, mode }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || "Failed to fetch stock data");
+  }
+
+  return result.data as EnhancedStockData;
+}
+
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export default function Home() {
   const [tradingMode, setTradingMode] = useState<TradingMode | null>(null);
 
   const [ticker, setTicker] = useState("");
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
+
+  // Legacy stockData for backward compatibility
   const [stockData, setStockData] = useState<StockData | null>(null);
+
+  // Enhanced Stock Data (with indicators)
+  const [enhancedData, setEnhancedData] = useState<EnhancedStockData | null>(null);
+
+  // Loading and Error States
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chart" | "fundamentals" | "news" | "vision">("chart");
+  const [error, setError] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<"chart" | "fundamentals" | "news" | "vision" | "risk">("chart");
 
   // AI Text Analysis State
   const [isAnalyzingText, setIsAnalyzingText] = useState(false);
   const [textAnalysis, setTextAnalysis] = useState<string | null>(null);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticker.trim()) return;
+  // ============================================================================
+  // Load Stock Data (Enhanced)
+  // ============================================================================
+
+  const loadStock = async (symbol: string) => {
+    if (!symbol.trim() || !tradingMode) return;
 
     setIsLoading(true);
+    setError(null);
     setStockData(null);
+    setEnhancedData(null);
     setTextAnalysis(null);
     setActiveSymbol(null);
 
     try {
+      const mode = tradingMode === "SCALPING" ? "scalping" : "swing";
       const response = await fetch("/api/stock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticker: ticker.trim() }),
+        body: JSON.stringify({ ticker: symbol.trim(), mode }),
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
 
-      setStockData(result.data);
-      setActiveSymbol(ticker.trim().toUpperCase());
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to fetch stock data");
+      }
+
+      // API returns flat StockData structure
+      const data = result.data as StockData;
+
+      // Set legacy stockData directly
+      setStockData(data);
+
+      // Create enhanced data with proper nested structure for indicator panels
+      // Note: Current API doesn't return indicators, so we set them to null
+      setEnhancedData({
+        symbol: data.symbol,
+        name: data.name,
+        quote: {
+          price: data.price,
+          change: data.change,
+          changePercent: data.changePercent,
+          volume: data.volume || 0,
+          marketCap: data.marketCap || null,
+          pe: data.pe || null,
+          pb: data.pb || null,
+          sector: null,
+          previousClose: data.previousClose || 0,
+          dayHigh: data.dayHigh || data.price,
+          dayLow: data.dayLow || data.price,
+        },
+        indicators: {
+          rsi: null,
+          macd: null,
+          bollingerBands: null,
+          ema20: null,
+          ema50: null,
+          sma20: null,
+          volumeAnalysis: null,
+        },
+        signals: [],
+        supportResistance: {
+          support: [],
+          resistance: [],
+        },
+        atr: 0,
+        recommendation: {
+          action: "HOLD",
+          confidence: 0,
+          reasoning: ["Insufficient data"],
+        },
+      });
+
+      setActiveSymbol(symbol.trim().toUpperCase());
+      toast.success(`Data ${symbol.toUpperCase()} berhasil dimuat!`, {
+        description: `Harga: Rp ${data.price?.toLocaleString("id-ID") || "N/A"}`,
+      });
     } catch (err) {
-      console.error(err);
+      const message = err instanceof Error ? err.message : "Terjadi kesalahan saat memuat data";
+      setError(message);
+
+      // Show specific toast based on error type
+      if (message.includes("not found") || message.includes("Not Found")) {
+        toast.error("Simbol saham tidak ditemukan", {
+          description: "Periksa kembali kode ticker yang Anda masukkan.",
+        });
+      } else if (message.includes("network") || message.includes("Network")) {
+        toast.error("Kesalahan jaringan", {
+          description: "Periksa koneksi internet Anda.",
+        });
+      } else if (message.includes("rate") || message.includes("limit") || message.includes("429")) {
+        toast.warning("Terlalu banyak permintaan", {
+          description: "Mohon tunggu sebentar sebelum mencoba lagi.",
+        });
+      } else {
+        toast.error("Gagal memuat data saham", {
+          description: message,
+        });
+      }
+
+      console.error("Stock fetch error:", err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await loadStock(ticker);
   };
 
   const handleAnalyzeText = async () => {
@@ -58,8 +181,8 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "text",
-          data: stockData,
-          mode: tradingMode // Pass the mode to API
+          data: enhancedData || stockData,
+          mode: tradingMode
         }),
       });
       const result = await response.json();
@@ -156,6 +279,14 @@ export default function Home() {
                 </div>
               </div>
             )}
+
+            {/* Error Display */}
+            {error && (
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/30 rounded-lg animate-in fade-in">
+                <span className="text-red-400 text-xs">⚠️ {error}</span>
+                <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 text-xs">✕</button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -164,11 +295,42 @@ export default function Home() {
           <div className="flex h-full">
 
             {/* Main Chart Area (Expandable) */}
-            <div className={`flex flex-col h-full transition-all duration-300 ${activeTab === 'chart' ? 'w-full' : 'hidden lg:flex lg:w-3/4'}`}>
-              <MainChartPanel
-                symbol={activeSymbol}
-                tradingMode={tradingMode}
-              />
+            <div className={`flex flex-col h-full transition-all duration-300 overflow-y-auto ${activeTab === 'chart' ? 'w-full' : 'hidden lg:flex lg:w-3/4'}`}>
+
+              {/* Loading State */}
+              {isLoading && (
+                <LoadingOverlay symbol={ticker} />
+              )}
+
+              {/* Chart (hidden during loading) */}
+              {!isLoading && (
+                <div className="flex-shrink-0" style={{ minHeight: '60%' }}>
+                  <MainChartPanel
+                    symbol={activeSymbol}
+                    tradingMode={tradingMode}
+                  />
+                </div>
+              )}
+
+              {/* Technical Indicators & Signals Grid (Below Chart) */}
+              {enhancedData && (
+                <div className="flex-shrink-0 p-4 border-t border-border/10 bg-background/30">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Technical Indicators Panel */}
+                    <TechnicalIndicatorsPanel
+                      indicators={enhancedData.indicators}
+                      currentPrice={enhancedData.quote.price}
+                    />
+
+                    {/* Trading Signals Panel */}
+                    <TradingSignalsPanel
+                      signals={enhancedData.signals}
+                      recommendation={enhancedData.recommendation}
+                      isLoading={isLoading}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Sidebar Tools (Collapsible) */}
