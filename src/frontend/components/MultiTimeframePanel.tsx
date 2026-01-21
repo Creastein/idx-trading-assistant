@@ -1,6 +1,6 @@
 "use client";
 
-import type { MultiTimeframeAnalysis } from "@/lib/multiTimeframeAnalysis";
+import { MultiTimeframeAnalysis } from "@/backend/analysis/multiTimeframe";
 
 interface MultiTimeframePanelProps {
     analysis: MultiTimeframeAnalysis | null;
@@ -95,7 +95,7 @@ export default function MultiTimeframePanel({ analysis }: MultiTimeframePanelPro
                             <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
                                 <div
                                     className={`h-full rounded-full ${tf.trend === "BULLISH" ? "bg-green-500" :
-                                            tf.trend === "BEARISH" ? "bg-red-500" : "bg-gray-500"
+                                        tf.trend === "BEARISH" ? "bg-red-500" : "bg-gray-500"
                                         }`}
                                     style={{ width: `${tf.strength}%` }}
                                 />
@@ -146,10 +146,10 @@ export default function MultiTimeframePanel({ analysis }: MultiTimeframePanelPro
                         <div
                             key={idx}
                             className={`flex-1 h-2 rounded-full ${tf.trend === analysis.confluence.direction
-                                    ? analysis.confluence.direction === "BULLISH"
-                                        ? "bg-green-500"
-                                        : "bg-red-500"
-                                    : "bg-gray-700"
+                                ? analysis.confluence.direction === "BULLISH"
+                                    ? "bg-green-500"
+                                    : "bg-red-500"
+                                : "bg-gray-700"
                                 }`}
                             title={`${getIntervalLabel(tf.interval)}: ${tf.trend}`}
                         />

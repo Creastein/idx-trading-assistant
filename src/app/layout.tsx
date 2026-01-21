@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import DisclaimerBanner from "@/components/DisclaimerBanner";
-import { SettingsProvider } from "@/components/SettingsContext";
-import WhatsNewModal from "@/components/WhatsNewModal";
+import DisclaimerBanner from "@/frontend/components/DisclaimerBanner";
+import { SettingsProvider } from "@/frontend/contexts/SettingsContext";
+import WhatsNewModal from "@/frontend/components/WhatsNewModal";
 import "./globals.css";
 
 const inter = Inter({

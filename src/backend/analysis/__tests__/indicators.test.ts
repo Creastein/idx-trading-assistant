@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { calculateRSI, calculateSMA, calculateEMA, calculateBollingerBands } from '../indicators'
 
 // Mock Data: 20 days of increasing prices
-const mockPrices = Array.from({ length: 20 }, (_, i) => 100 + i * 2)
+// Mock Data: 20 days of increasing prices
 // [100, 102, 104, ..., 138]
 
 describe('Technical Indicators', () => {

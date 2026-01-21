@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { type BacktestResult } from "@/lib/backtesting";
+import { BacktestResult } from "@/backend/analysis/backtesting";
 import {
     ArrowUpRight,
     ArrowDownRight,
     TrendingUp,
     Activity,
     Percent,
-    AlertCircle,
     BarChart2,
     Calendar,
     DollarSign,

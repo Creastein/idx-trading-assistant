@@ -4,7 +4,7 @@ import AIVisionPanel from "./AIVisionPanel";
 import NewsSentimentPanel from "./NewsSentimentPanel";
 import ScalpingCalculator from "./ScalpingCalculator";
 import RiskManagement from "./RiskManagement";
-import { StockData, TradingMode } from "@/lib/types";
+import { StockData, TradingMode } from "@/shared/types";
 
 interface AnalysisSidebarProps {
     ticker: string;
@@ -49,15 +49,18 @@ export default function AnalysisSidebar({
                 >
                     RISIKO
                 </button>
-                <button
-                    onClick={() => onTabChange("news")}
-                    className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "news"
-                        ? "border-purple-500 text-purple-500 bg-purple-500/5"
-                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                        }`}
-                >
-                    BERITA
-                </button>
+                {/* News Tab - SWING MODE ONLY */}
+                {tradingMode === 'SWING' && (
+                    <button
+                        onClick={() => onTabChange("news")}
+                        className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "news"
+                            ? "border-purple-500 text-purple-500 bg-purple-500/5"
+                            : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                            }`}
+                    >
+                        BERITA
+                    </button>
+                )}
                 <button
                     onClick={() => onTabChange("vision")}
                     className={`flex-1 py-3 text-xs font-mono font-semibold transition-all border-b-2 ${activeTab === "vision"

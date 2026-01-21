@@ -8,7 +8,7 @@ const STORAGE_KEY = "last_seen_version";
 
 export default function WhatsNewModal() {
     const [isOpen, setIsOpen] = useState(false);
-    const [dontShowAgain, setDontShowAgain] = useState(false);
+    // const [dontShowAgain, setDontShowAgain] = useState(false); // Reserved for future use
 
     useEffect(() => {
         try {
@@ -99,7 +99,7 @@ export default function WhatsNewModal() {
                             IDX Trading Assistant <span className="text-primary">v{CURRENT_VERSION}</span>
                         </h2>
                         <p className="text-gray-400 max-w-2xl mx-auto">
-                            We've massively upgraded your trading arsenal. Here is what's new.
+                            We&apos;ve massively upgraded your trading arsenal. Here is what&apos;s new.
                         </p>
                     </div>
 

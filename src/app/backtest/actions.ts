@@ -1,6 +1,6 @@
 "use server";
 
-import { runBacktest, type BacktestResult } from "@/lib/backtesting";
+import { runBacktest, type BacktestResult } from "@/backend/analysis/backtesting";
 
 export async function executeBacktest(
     symbol: string,

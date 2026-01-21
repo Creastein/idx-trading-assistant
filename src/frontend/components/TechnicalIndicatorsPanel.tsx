@@ -39,7 +39,7 @@ interface Indicators {
     ema20: number | null;
     ema50: number | null;
     sma20: number | null;
-    volumeAnalysis: VolumeAnalysisResult | null;
+    volumeAnalysis: VolumeAnalysisResult | null; // Changed type as per instruction
 }
 
 interface TechnicalIndicatorsPanelProps {

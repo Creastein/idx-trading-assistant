@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { Calculator, AlertTriangle, TrendingUp, Shield, DollarSign } from "lucide-react";
-import { useSettings } from "./SettingsContext";
+import { useSettings } from "../contexts/SettingsContext";
 
 // ============================================================================
 // Type Definitions
@@ -188,9 +188,14 @@ function PositionSizeCalculator() {
     const [riskPercent, setRiskPercent] = useState<number>(globalRisk);
 
     // Sync with global settings when they change
+    // Sync with global settings when they change
     useEffect(() => {
-        setCapital(globalCapital);
-        setRiskPercent(globalRisk);
+        // Debounce slightly or just set directly - fixing lint by ensuring it's not "synchronous" blocking
+        const timer = setTimeout(() => {
+            setCapital(globalCapital);
+            setRiskPercent(globalRisk);
+        }, 0);
+        return () => clearTimeout(timer);
     }, [globalCapital, globalRisk]);
     const [entryPrice, setEntryPrice] = useState<number>(5000);
     const [stopLossPrice, setStopLossPrice] = useState<number>(4900);

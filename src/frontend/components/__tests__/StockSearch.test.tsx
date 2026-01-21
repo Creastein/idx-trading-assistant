@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { StockSearch } from '../StockSearch'
 
 // Mock the stock list
-vi.mock('@/lib/stockList', () => ({
+vi.mock('@/frontend/data/stockList', () => ({
     POPULAR_IDX_STOCKS: [
         { symbol: 'BBCA', name: 'Bank Central Asia', sector: 'Finance' },
         { symbol: 'GOTO', name: 'GoTo Gojek Tokopedia', sector: 'Technology' },

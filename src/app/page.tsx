@@ -1,42 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import MainChartPanel from "@/components/MainChartPanel";
-import AnalysisSidebar from "@/components/AnalysisSidebar";
-import ModeSelectionScreen from "@/components/ModeSelectionScreen";
-import SidebarNavigation from "@/components/SidebarNavigation";
-import { TechnicalIndicatorsPanel } from "@/components/TechnicalIndicatorsPanel";
-import { TradingSignalsPanel } from "@/components/TradingSignalsPanel";
-import { LoadingOverlay } from "@/components/LoadingSpinner";
-import MultiTimeframePanel from "@/components/MultiTimeframePanel";
-import { StockData, TradingMode, EnhancedStockData } from "@/lib/types";
-import type { MultiTimeframeAnalysis } from "@/lib/multiTimeframeAnalysis";
-import { SettingsDialog } from "@/components/SettingsDialog";
-import { StockSearch } from "@/components/StockSearch";
+import MainChartPanel from "@/frontend/components/MainChartPanel";
+import AnalysisSidebar from "@/frontend/components/AnalysisSidebar";
+import ModeSelectionScreen from "@/frontend/components/ModeSelectionScreen";
+import SidebarNavigation from "@/frontend/components/SidebarNavigation";
+import { TechnicalIndicatorsPanel } from "@/frontend/components/TechnicalIndicatorsPanel";
+import { TradingSignalsPanel } from "@/frontend/components/TradingSignalsPanel";
+import { LoadingOverlay } from "@/frontend/components/LoadingSpinner";
+import MultiTimeframePanel from "@/frontend/components/MultiTimeframePanel";
+import { StockData, TradingMode, EnhancedStockData } from "@/shared/types";
+import type { MultiTimeframeAnalysis } from "@/backend/analysis/multiTimeframe";
+import { SettingsDialog } from "@/frontend/components/SettingsDialog";
+import { StockSearch } from "@/frontend/components/StockSearch";
 
 // ============================================================================
-// Helper: Fetch Enhanced Stock Data
-// ============================================================================
 
-async function fetchEnhancedStockData(
-  symbol: string,
-  mode: "scalping" | "swing"
-): Promise<EnhancedStockData> {
-  const response = await fetch("/api/stock", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticker: symbol, mode }),
-  });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.error || "Failed to fetch stock data");
-  }
-
-  return result.data as EnhancedStockData;
-}
 
 // ============================================================================
 // Main Component
@@ -45,7 +25,6 @@ async function fetchEnhancedStockData(
 export default function Home() {
   const [tradingMode, setTradingMode] = useState<TradingMode | null>(null);
 
-  const [ticker, setTicker] = useState("");
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
 
   // Legacy stockData for backward compatibility
@@ -68,6 +47,11 @@ export default function Home() {
   const [mtfAnalysis, setMtfAnalysis] = useState<MultiTimeframeAnalysis | null>(null);
   const [isLoadingMTF, setIsLoadingMTF] = useState(false);
   const [mtfLastUpdated, setMtfLastUpdated] = useState<number | null>(null);
+
+  // Reset active tab when trading mode changes to avoid orphaned tabs
+  useEffect(() => {
+    setActiveTab('chart');
+  }, [tradingMode]);
 
   // ============================================================================
   // Load Stock Data (Enhanced)
@@ -153,13 +137,8 @@ export default function Home() {
     }
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await loadStock(ticker);
-  };
-
   // Auto-fetch MTF analysis when stock loads
-  const fetchMTFAnalysis = async (symbol: string, mode: "SCALPING" | "SWING") => {
+  const fetchMTFAnalysis = useCallback(async (symbol: string, mode: "SCALPING" | "SWING") => {
     if (!symbol) return;
 
     setIsLoadingMTF(true);
@@ -193,7 +172,7 @@ export default function Home() {
     } finally {
       setIsLoadingMTF(false);
     }
-  };
+  }, []);
 
   const handleRefreshAnalysis = async () => {
     if (!activeSymbol || !tradingMode) return;
@@ -212,7 +191,7 @@ export default function Home() {
       console.log('[MTF] Auto-triggering analysis for', activeSymbol);
       fetchMTFAnalysis(activeSymbol, tradingMode);
     }
-  }, [enhancedData?.symbol, tradingMode]); // Trigger when symbol or mode changes
+  }, [enhancedData, activeSymbol, tradingMode, fetchMTFAnalysis]); // Trigger when symbol or mode changes
 
   const handleAnalyzeText = async () => {
     if (!stockData || !tradingMode) return;
@@ -251,7 +230,7 @@ export default function Home() {
   return (
     <div className="min-h-[100dvh] bg-terminal-bg flex flex-col md:flex-row h-[100dvh] overflow-hidden user-select-none">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden mr-0 md:mr-14 pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col overflow-hidden ml-0 md:ml-14 pb-16 md:pb-0">
         {/* Header - Borderless & Seamless */}
         <header className="bg-background/50 backdrop-blur-md sticky top-0 z-30 shrink-0 border-b border-border/10">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-3 lg:gap-6">
@@ -287,7 +266,6 @@ export default function Home() {
               <StockSearch
                 onSelect={(symbol) => loadStock(symbol)}
                 isLoading={isLoading}
-                initialValue={ticker}
               />
             </div>
 
@@ -332,7 +310,7 @@ export default function Home() {
 
               {/* Loading State */}
               {isLoading && (
-                <LoadingOverlay symbol={ticker} />
+                <LoadingOverlay symbol={activeSymbol || "Loading..."} />
               )}
 
               {/* Chart (hidden during loading) */}
@@ -411,7 +389,7 @@ export default function Home() {
             {activeTab !== 'chart' && (
               <div className="w-full lg:w-1/4 h-full overflow-hidden flex flex-col animate-in slide-in-from-right-10 fade-in duration-300 bg-background/50 border-l border-border/10 backdrop-blur-sm">
                 <AnalysisSidebar
-                  ticker={ticker}
+                  ticker={activeSymbol || ""}
                   stockData={stockData}
                   onAnalyzeText={handleAnalyzeText}
                   isAnalyzingText={isAnalyzingText}

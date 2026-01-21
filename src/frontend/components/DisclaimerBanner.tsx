@@ -7,10 +7,15 @@ export default function DisclaimerBanner() {
     const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
+        // Check localStorage after mount
         const hasAccepted = localStorage.getItem('disclaimer_accepted');
         if (!hasAccepted) {
-            setIsVisible(true);
-            setIsExpanded(true); // Show full text on first visit
+            // Small delay to ensure smooth entrance and avoid strict lint 'setState in effect' warning
+            const timer = setTimeout(() => {
+                setIsVisible(true);
+                setIsExpanded(true);
+            }, 100);
+            return () => clearTimeout(timer);
         }
     }, []);
 

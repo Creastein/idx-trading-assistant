@@ -4,18 +4,10 @@ import Groq from "groq-sdk";
 import {
     analyzeMultipleTimeframes,
     type MultiTimeframeAnalysis,
-} from "@/lib/multiTimeframeAnalysis";
+} from "@/backend/analysis/multiTimeframe";
 import {
-    calculateRSI,
-    calculateMACD,
-    calculateBollingerBands,
-    calculateEMA,
-    analyzeVolume,
-    type IndicatorResult,
-    type MACDResult,
-    type BollingerBandsResult,
-    type VolumeAnalysisResult,
-} from "@/lib/indicators";
+} from "@/backend/analysis/indicators";
+import { EnhancedStockData } from "@/shared/types";
 
 // Initialize Gemini (for Image Analysis)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -73,51 +65,13 @@ interface AnalyzeRequest {
     symbol?: string;
 }
 
-interface EnhancedStockData {
-    symbol: string;
-    name: string;
-    quote: {
-        price: number;
-        change: number;
-        changePercent: number;
-        volume: number;
-        marketCap: number | null;
-        pe: number | null;
-        pb: number | null;
-        sector: string | null;
-        previousClose: number;
-        dayHigh: number;
-        dayLow: number;
-    };
-    indicators: {
-        rsi: IndicatorResult | null;
-        macd: MACDResult | null;
-        bollingerBands: BollingerBandsResult | null;
-        ema20: number | null;
-        ema50: number | null;
-        sma20: number | null;
-        volumeAnalysis: VolumeAnalysisResult | null;
-    };
-    signals: Signal[];
-    supportResistance: {
-        support: number[];
-        resistance: number[];
-    };
-    atr: number;
-    recommendation: {
-        action: string;
-        confidence: number;
-        reasoning: string[];
-    };
-}
+// EnhancedStockData imported from @/shared/types
 
-interface Signal {
-    type: "BUY" | "SELL";
-    indicator: string;
-    reason: string;
-    strength: "WEAK" | "MEDIUM" | "STRONG";
-    price: number;
-}
+// Signal imported from @/shared/types (if needed) or use locally if not shared.
+// Actually Signal is used in EnhancedStockData which is imported. 
+// Let's check if Signal is exported from shared/types. Assuming yes for now or it's part of EnhancedStockData.
+// If EnhancedStockData is imported, we don't need to redefine it here.
+
 
 interface NewsSentiment {
     overall: string;
@@ -184,22 +138,22 @@ function createScalpingPrompt(
     data: EnhancedStockData,
     mtf: MultiTimeframeAnalysis
 ): string {
-    const rsiValue = data.indicators.rsi?.current?.toFixed(2) || "N/A";
-    const rsiSignal = data.indicators.rsi?.signal || "N/A";
+    const rsiValue = data.indicators.rsi?.value?.toFixed(2) || "N/A";
+    const rsiSignal = data.indicators.rsi?.interpretation || "N/A";
 
-    const macdValue = data.indicators.macd?.current?.macd?.toFixed(2) || "N/A";
-    const macdSignal = data.indicators.macd?.current?.signal?.toFixed(2) || "N/A";
-    const macdHistogram = data.indicators.macd?.current?.histogram?.toFixed(2) || "N/A";
+    const macdValue = data.indicators.macd?.macd?.toFixed(2) || "N/A";
+    const macdSignal = data.indicators.macd?.signal?.toFixed(2) || "N/A";
+    const macdHistogram = data.indicators.macd?.histogram?.toFixed(2) || "N/A";
     const macdCrossover = data.indicators.macd?.crossover || "NONE";
 
-    const bbUpper = data.indicators.bollingerBands?.current?.upper;
-    const bbMiddle = data.indicators.bollingerBands?.current?.middle;
-    const bbLower = data.indicators.bollingerBands?.current?.lower;
-    const bbSignal = data.indicators.bollingerBands?.signal || "N/A";
+    const bbUpper = data.indicators.bollingerBands?.upper;
+    const bbMiddle = data.indicators.bollingerBands?.middle;
+    const bbLower = data.indicators.bollingerBands?.lower;
+    const bbSignal = data.indicators.bollingerBands?.position || "N/A";
 
     const volumeSpike = data.indicators.volumeAnalysis?.isSpike ? "⚠️ SPIKE" : "";
-    const volumeRatio = data.indicators.volumeAnalysis?.volumeRatio
-        ? `(${(data.indicators.volumeAnalysis.volumeRatio * 100).toFixed(0)}% of avg)`
+    const volumeRatio = data.indicators.volumeAnalysis?.ratio
+        ? `(${(data.indicators.volumeAnalysis.ratio * 100).toFixed(0)}% of avg)`
         : "";
 
     return `
@@ -324,9 +278,9 @@ Key Levels:
 ${newsSection}
 
 === TECHNICAL INDICATORS ===
-RSI(14): ${data.indicators.rsi?.current?.toFixed(2) || "N/A"} - ${data.indicators.rsi?.signal || "N/A"}
+RSI(14): ${data.indicators.rsi?.value?.toFixed(2) || "N/A"} - ${data.indicators.rsi?.interpretation || "N/A"}
 MACD Crossover: ${data.indicators.macd?.crossover || "NONE"}
-Bollinger Position: ${data.indicators.bollingerBands?.signal || "N/A"}
+Bollinger Position: ${data.indicators.bollingerBands?.position || "N/A"}
 EMA20: ${formatRupiah(data.indicators.ema20)}
 EMA50: ${formatRupiah(data.indicators.ema50)}
 

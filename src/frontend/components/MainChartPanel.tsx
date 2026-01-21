@@ -1,8 +1,8 @@
 "use client";
 
-import TradingViewChart from "@/components/TradingViewChart";
-import { TradingMode } from "@/lib/types";
-import { TRADINGVIEW } from "@/lib/constants";
+import TradingViewChart from "./TradingViewChart";
+import { TradingMode } from "@/shared/types";
+import { TRADINGVIEW } from "@/shared/constants";
 
 interface MainChartPanelProps {
     symbol: string | null;

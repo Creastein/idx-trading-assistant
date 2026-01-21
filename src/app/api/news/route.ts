@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import YahooFinance from "yahoo-finance2";
 const yahooFinance = new YahooFinance();
 import Groq from "groq-sdk";
-import { YAHOO_FINANCE, AI_MODELS } from "@/lib/constants";
+import { YAHOO_FINANCE, AI_MODELS } from "@/shared/constants";
 
 // Yahoo Finance Types
 interface YahooNewsItem {

@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { executeBacktest } from "./actions";
-import { BacktestResults } from "@/components/BacktestResults";
-import { type BacktestResult } from "@/lib/backtesting";
+import { BacktestResults } from "@/frontend/components/BacktestResults";
+import { type BacktestResult } from "@/backend/analysis/backtesting";
 import {
     Play,
     RefreshCw,
@@ -192,6 +192,7 @@ export default function BacktestPage() {
                                 <BacktestResults results={backtestResults} />
 
                                 <div className="flex justify-end pt-4">
+                                    <p className="text-gray-400">&quot;Time in the market beats timing the market&quot; - but testing your strategy first beats losing money.</p>
                                     <button
                                         onClick={handleClear}
                                         className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
@@ -207,7 +208,7 @@ export default function BacktestPage() {
                                 </div>
                                 <h3 className="text-xl font-bold text-white mb-2">Ready to Backtest</h3>
                                 <p className="text-muted-foreground max-w-sm mb-8">
-                                    Configure your strategy parameters on the left and click "Run Backtest" to see detailed performance analysis.
+                                    Configure your strategy parameters on the left and click &quot;Run Backtest&quot; to see detailed performance analysis.
                                 </p>
                                 <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground/50 opacity-50">
                                     <div className="h-20 w-16 bg-white/10 rounded-md"></div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { TradingMode } from "@/lib/types";
+import { TradingMode } from "@/shared/types";
 
 interface SidebarNavigationProps {
     tradingMode: TradingMode;
@@ -48,7 +48,8 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
             active: activeTab === "fundamentals",
             onClick: () => onTabChange("fundamentals")
         },
-        {
+        // News - Only show in Swing mode
+        ...(tradingMode === 'SWING' ? [{
             id: "news",
             icon: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,7 +59,7 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
             label: "News",
             active: activeTab === "news",
             onClick: () => onTabChange("news")
-        },
+        }] : []),
         {
             id: "ai-vision",
             icon: (
@@ -101,9 +102,9 @@ export default function SidebarNavigation({ tradingMode, onBackToModeSelection, 
 
     return (
         <>
-            {/* Desktop Sidebar (Right) */}
+            {/* Desktop Sidebar (Left) */}
             <div
-                className={`hidden md:block fixed right-0 top-0 h-full bg-card border-l border-border z-40 transition-all duration-300 ${isExpanded ? "w-56" : "w-14"
+                className={`hidden md:block fixed left-0 top-0 h-full bg-card border-r border-border z-40 transition-all duration-300 ${isExpanded ? "w-56" : "w-14"
                     }`}
                 onMouseEnter={() => setIsExpanded(true)}
                 onMouseLeave={() => setIsExpanded(false)}

@@ -1,4 +1,4 @@
-const fetch = global.fetch || require('node-fetch');
+const fetch = /* eslint-disable @typescript-eslint/no-require-imports */ require('node-fetch');
 
 async function testEndpoint() {
     const url = 'http://localhost:3000/api/analyze/multi-timeframe';

@@ -3,20 +3,15 @@ import YahooFinance from "yahoo-finance2";
 
 const yahooFinance = new YahooFinance();
 import {
-    calculateRSI,
-    calculateMACD,
-    calculateBollingerBands,
     calculateEMA,
     calculateSMA,
     analyzeVolume,
     performTechnicalAnalysis,
     type IndicatorResult,
-    type MACDResult,
-    type BollingerBandsResult,
     type VolumeAnalysisResult,
     type TechnicalAnalysisResult,
-} from "@/lib/indicators";
-import { StockData } from "@/lib/types";
+} from "@/backend/analysis/indicators";
+
 
 
 // ============================================================================

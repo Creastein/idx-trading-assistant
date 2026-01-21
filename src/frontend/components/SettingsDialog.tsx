@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useSettings } from "./SettingsContext";
+import React, { useState } from "react";
+import { useSettings } from "../contexts/SettingsContext";
 import { Settings, X, RotateCcw, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -9,17 +9,16 @@ export function SettingsDialog() {
     const { capital, riskPercentage, updateSettings, resetSettings } = useSettings();
     const [isOpen, setIsOpen] = useState(false);
 
-    // Local state for inputs to allow smooth typing before saving/validating
+    // Local state for inputs
     const [localCapital, setLocalCapital] = useState(capital.toString());
     const [localRisk, setLocalRisk] = useState(riskPercentage.toString());
 
-    // Sync local state when open or when context updates (external change)
-    useEffect(() => {
-        if (isOpen) {
-            setLocalCapital(capital.toString());
-            setLocalRisk(riskPercentage.toString());
-        }
-    }, [isOpen, capital, riskPercentage]);
+    // Handler to open modal and sync state
+    const handleOpen = () => {
+        setLocalCapital(capital.toString());
+        setLocalRisk(riskPercentage.toString());
+        setIsOpen(true);
+    };
 
     const handleSave = () => {
         const newCapital = parseFloat(localCapital);
@@ -61,7 +60,7 @@ export function SettingsDialog() {
     return (
         <>
             <button
-                onClick={() => setIsOpen(true)}
+                onClick={handleOpen}
                 className="p-2 rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
                 title="Settings"
             >

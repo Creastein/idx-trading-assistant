@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
     analyzeMultipleTimeframes,
     type MultiTimeframeAnalysis,
-} from "@/lib/multiTimeframeAnalysis";
+} from "@/backend/analysis/multiTimeframe";
 
 // ============================================================================
 // Cache Configuration

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Search, X, TrendingUp } from "lucide-react";
-import { POPULAR_IDX_STOCKS, StockOption } from "@/lib/stockList";
+import { POPULAR_IDX_STOCKS } from "@/frontend/data/stockList";
 
 interface StockSearchProps {
     onSelect: (symbol: string) => void;
