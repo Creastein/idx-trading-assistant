@@ -17,7 +17,7 @@ export interface StockData {
     low52Week?: number;
 }
 
-export type TradingMode = 'SCALPING' | 'SWING';
+export type TradingMode = 'SCALPING' | 'SWING' | 'BPJS';
 
 // ============================================================================
 // Enhanced Stock Data Types (for Technical Indicators)
@@ -59,6 +59,13 @@ export interface Signal {
     price: number;
 }
 
+export interface StockNews {
+    title: string;
+    publisher: string;
+    link: string;
+    publishTime: string;
+}
+
 export interface Recommendation {
     action: string;
     confidence: number;
@@ -96,6 +103,20 @@ export interface EnhancedStockData {
         resistance: number[];
     };
     atr: number;
+    news?: StockNews[];
     recommendation: Recommendation;
+    lastUpdated?: number;
+}
+
+export interface MarketContext {
+    ihsg: {
+        price: number;
+        changePercent: number;
+        trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    };
+    usdidr: {
+        price: number;
+        changePercent: number;
+    };
 }
 

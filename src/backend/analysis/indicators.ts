@@ -58,6 +58,11 @@ export interface VolumeAnalysisResult {
     signal: VolumeSignal;
 }
 
+export interface ATRResult {
+    values: number[];
+    current: number;
+}
+
 // ============================================================================
 // Utility Functions
 // ============================================================================
@@ -511,8 +516,59 @@ export interface TechnicalAnalysisResult {
     sma20: IndicatorResult | null;
     ema12: IndicatorResult | null;
     volume: VolumeAnalysisResult | null;
+    atr: number | null;
     overallSignal: Signal;
     confidence: number;
+}
+
+/**
+ * Calculates Average True Range (ATR)
+ * 
+ * @param highs - Array of high prices
+ * @param lows - Array of low prices
+ * @param closes - Array of closing prices
+ * @param period - Period (default: 14)
+ * @returns ATRResult
+ */
+export function calculateATR(
+    highs: number[],
+    lows: number[],
+    closes: number[],
+    period: number = 14
+): ATRResult | null {
+    if (!highs || !lows || !closes || highs.length < period + 1) return null;
+
+    const trueRanges: number[] = [];
+
+    // Calculate True Range for each day
+    // TR = Max(High-Low, Abs(High-PrevClose), Abs(Low-PrevClose))
+    for (let i = 1; i < highs.length; i++) {
+        const high = highs[i];
+        const low = lows[i];
+        const prevClose = closes[i - 1];
+
+        const tr = Math.max(
+            high - low,
+            Math.abs(high - prevClose),
+            Math.abs(low - prevClose)
+        );
+        trueRanges.push(tr);
+    }
+
+    // First ATR = Simple Average of TRs
+    let atr = trueRanges.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    const values: number[] = [atr];
+
+    // Subsequent ATRs = ((Prior ATR * (period-1)) + Current TR) / period
+    for (let i = period; i < trueRanges.length; i++) {
+        atr = ((atr * (period - 1)) + trueRanges[i]) / period;
+        values.push(atr);
+    }
+
+    return {
+        values,
+        current: values[values.length - 1]
+    };
 }
 
 /**
@@ -524,7 +580,9 @@ export interface TechnicalAnalysisResult {
  */
 export function performTechnicalAnalysis(
     prices: number[],
-    volumes: number[]
+    volumes: number[],
+    highs?: number[],
+    lows?: number[]
 ): TechnicalAnalysisResult {
     // Input validation
     if (!prices || !Array.isArray(prices)) {
@@ -567,6 +625,16 @@ export function performTechnicalAnalysis(
     const sma20 = calculateSMA(validPrices, 20);
     const ema12 = calculateEMA(validPrices, 12);
     const volume = validVolumes.length >= 20 ? analyzeVolume(validVolumes) : null;
+
+    // Calculate ATR if highs and lows are provided
+    let atr = null;
+    if (highs && lows && highs.length === prices.length && lows.length === prices.length) {
+        const atrResult = calculateATR(highs, lows, prices);
+        if (atrResult) {
+            atr = atrResult.current;
+            console.log(`[Indicators] ATR Calculated: ${atr.toFixed(0)}`);
+        }
+    }
 
     // Calculate overall signal based on all indicators
     let buyScore = 0;
@@ -626,6 +694,7 @@ export function performTechnicalAnalysis(
         sma20,
         ema12,
         volume,
+        atr,
         overallSignal,
         confidence,
     };

@@ -27,3 +27,15 @@ export const YAHOO_FINANCE = {
     IDX_SUFFIX: '.JK',
     NEWS_COUNT: 5,
 } as const;
+
+// Auto-Refresh Configuration
+export const REFRESH_INTERVAL = {
+    SCALPING: 30 * 1000,      // 30 seconds
+    SWING: 5 * 60 * 1000,     // 5 minutes
+} as const;
+
+// Data Delay Notice
+export const DATA_DELAY = {
+    MESSAGE: 'Free tier data is delayed approximately 15-20 minutes',
+    RECOMMENDATION: 'For real-time data, consider upgrading to a premium data provider',
+} as const;

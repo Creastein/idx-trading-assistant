@@ -61,7 +61,7 @@ interface ChartResult {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cache = new Map<string, { data: Record<string, any>; timestamp: number }>();
-const CACHE_DURATION_SCALPING = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION_SCALPING = 30 * 1000; // 30 seconds for near real-time
 const CACHE_DURATION_SWING = 60 * 60 * 1000; // 1 hour
 
 // ============================================================================
@@ -364,7 +364,10 @@ export async function POST(request: NextRequest) {
         const cached = cache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < cacheDuration) {
             console.log('[Stock API] Returning cached data for:', cacheKey);
-            return NextResponse.json({ success: true, data: cached.data });
+            return NextResponse.json({
+                success: true,
+                data: { ...cached.data, lastUpdated: cached.timestamp, cacheHit: true }
+            });
         }
 
         const symbolWithSuffix = `${normalizedSymbol}.JK`;
@@ -524,9 +527,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Build response - return EnhancedStockData with all indicators
+        const now = Date.now();
         const response = {
             symbol: normalizedSymbol,
             name: quote.longName || quote.shortName || normalizedSymbol,
+            lastUpdated: now,
+            cacheHit: false,
             quote: {
                 price: currentPrice,
                 change: quote.regularMarketChange || 0,

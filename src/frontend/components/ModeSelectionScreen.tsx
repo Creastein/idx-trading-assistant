@@ -1,7 +1,7 @@
 "use client";
 
 interface ModeSelectionScreenProps {
-    onSelectMode: (mode: 'SCALPING' | 'SWING') => void;
+    onSelectMode: (mode: 'SCALPING' | 'SWING' | 'BPJS') => void;
 }
 
 export default function ModeSelectionScreen({ onSelectMode }: ModeSelectionScreenProps) {
@@ -24,7 +24,7 @@ export default function ModeSelectionScreen({ onSelectMode }: ModeSelectionScree
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl w-full z-10">
                 {/* Scalping Mode Card */}
                 <button
                     onClick={() => onSelectMode('SCALPING')}
@@ -80,11 +80,39 @@ export default function ModeSelectionScreen({ onSelectMode }: ModeSelectionScree
                         </div>
                     </div>
                 </button>
+
+                {/* BPJS Mode Card */}
+                <button
+                    onClick={() => onSelectMode('BPJS')}
+                    className="group relative bg-card hover:bg-card/80 border border-border hover:border-blue-500/50 rounded-2xl p-8 text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/10"
+                >
+                    <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+
+                    <div className="relative">
+                        <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-6 ring-1 ring-blue-500/20 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                            <svg className="w-6 h-6 text-blue-500 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-foreground mb-2 group-hover:text-blue-500 transition-colors">🎯 BPJS Screener</h2>
+                        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                            Beli Pagi Jual Sore dengan bantuan AI Scanner otomatis.
+                            <br /><span className="text-xs opacity-70">Interval: 09:00-09:30 • Fokus: Speed • AI: Screener</span>
+                        </p>
+
+                        <div className="flex items-center gap-2 text-xs font-mono text-blue-500">
+                            <span>INISIALISASI WORKSPACE</span>
+                            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                        </div>
+                    </div>
+                </button>
             </div>
 
             <p className="fixed bottom-6 text-[10px] text-muted-foreground/50 font-mono">
                 v1.2.0 • POWERED BY GEMINI 2.0 FLASH & GROQ
             </p>
-        </div>
+        </div >
     );
 }
