@@ -24,9 +24,10 @@ const yahooFinance = new YahooFinance();
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { symbol: string } }
+    { params }: { params: Promise<{ symbol: string }> }
 ) {
-    const symbol = params.symbol.toUpperCase();
+    const { symbol: rawSymbol } = await params;
+    const symbol = rawSymbol.toUpperCase();
 
     try {
         console.log(`[BPJS Analyze] Analyzing ${symbol}`);
@@ -102,7 +103,7 @@ export async function GET(
                     signal: analysis.macd.current.signal,
                     histogram: analysis.macd.current.histogram,
                     crossover: analysis.macd.crossover,
-                } : { macd: 0, signal: 0, histogram: 0, crossover: null },
+                } : { macd: 0, signal: 0, histogram: 0, crossover: 'NONE' as const },
                 bollingerBands: analysis.bollingerBands ? {
                     upper: analysis.bollingerBands.current.upper,
                     middle: analysis.bollingerBands.current.middle,
