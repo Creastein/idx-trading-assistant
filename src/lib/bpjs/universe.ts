@@ -175,3 +175,44 @@ export function getSectorDistribution(): Map<Sector, number> {
 export function getAllSymbols(): string[] {
     return BPJS_UNIVERSE.map(stock => stock.symbol);
 }
+
+/**
+ * Get dynamic trending stocks for scalping
+ * Uses Yahoo Finance 'trending' or 'active' modules if available,
+ * otherwise falls back to high-volume stocks from static list.
+ */
+export async function getTrendingStocks(limit: number = 20): Promise<string[]> {
+    try {
+        const yahooFinance = (await import('yahoo-finance2')).default;
+
+        // Try fetching daily gainers first (often "in play")
+        // Note: YF API for lists can be flaky, so we wrap in try/catch independently
+        try {
+            const result = await yahooFinance.dailyGainers({ count: limit, region: 'ID' }) as any; // Cast to any to avoid type issues
+            const symbols: string[] = result.quotes
+                .filter((q: any) => q.symbol.endsWith('.JK'))
+                .map((q: any) => q.symbol.replace('.JK', ''));
+
+            if (symbols.length > 5) return symbols.slice(0, limit);
+        } catch (e) {
+            console.warn('[Universe] Failed to fetch daily gainers, trying trending...');
+        }
+
+        // Fallback: Use static high-volume universe + random shift to simulate "active" if daily gainers fails
+        // In real app, this would query a real-time scanner API.
+        // For now, prioritize sectors that are usually active (Banking, Energy, Mining)
+        const prioritySectors: Sector[] = ['Banking', 'Energy', 'Mining', 'Tech'];
+        const activeStocks = BPJS_UNIVERSE
+            .filter(s => prioritySectors.includes(s.sector))
+            .sort((a, b) => b.avgVolume20d - a.avgVolume20d)
+            .map(s => s.symbol)
+            .slice(0, limit);
+
+        return activeStocks;
+
+    } catch (error) {
+        console.error('[Universe] Failed to fetch trending stocks:', error);
+        // Ultimate fallback
+        return ['BBCA', 'BBRI', 'BMRI', 'TLKM', 'ASII', 'ADRO', 'GOTO', 'ANTM', 'UNVR', 'BBNI'];
+    }
+}

@@ -58,6 +58,16 @@ export interface VolumeAnalysisResult {
     signal: VolumeSignal;
 }
 
+export interface StochasticResult {
+    k: number[];
+    d: number[];
+    current: {
+        k: number;
+        d: number;
+    };
+    signal: Signal;
+}
+
 export interface ATRResult {
     values: number[];
     current: number;
@@ -503,6 +513,198 @@ export function analyzeVolume(
 }
 
 // ============================================================================
+// Stochastic Oscillator
+// ============================================================================
+
+/**
+ * Calculates Stochastic Oscillator
+ *
+ * @param highs - Array of high prices
+ * @param lows - Array of low prices
+ * @param closes - Array of closing prices
+ * @param period - Lookback period (default: 14)
+ * @param kPeriod - %K smoothing period (default: 3)
+ * @param dPeriod - %D smoothing period (default: 3)
+ * @returns StochasticResult
+ */
+export function calculateStochastic(
+    highs: number[],
+    lows: number[],
+    closes: number[],
+    period: number = 14,
+    kPeriod: number = 3,
+    dPeriod: number = 3
+): StochasticResult | null {
+    if (!highs || !lows || !closes || highs.length < period + kPeriod) {
+        return null;
+    }
+
+    const rawK: number[] = [];
+
+    // Calculate Raw %K
+    for (let i = period - 1; i < closes.length; i++) {
+        const currentClose = closes[i];
+
+        // Find High/Low in the lookback window
+        let highestHigh = -Infinity;
+        let lowestLow = Infinity;
+
+        for (let j = 0; j < period; j++) {
+            const h = highs[i - j];
+            const l = lows[i - j];
+            if (h > highestHigh) highestHigh = h;
+            if (l < lowestLow) lowestLow = l;
+        }
+
+        const denominator = highestHigh - lowestLow;
+        const kValue = denominator === 0 ? 50 : ((currentClose - lowestLow) / denominator) * 100;
+        rawK.push(kValue);
+    }
+
+    // Smooth %K
+    const smoothedKResult = calculateSMA(rawK, kPeriod);
+    if (!smoothedKResult) return null;
+    const kLine = smoothedKResult.values;
+
+    // Calculate %D (SMA of %K)
+    const dResult = calculateSMA(kLine, dPeriod);
+    if (!dResult) return null;
+    const dLine = dResult.values;
+
+    const currentK = kLine[kLine.length - 1];
+    const currentD = dLine[dLine.length - 1];
+
+    // Signal Logic
+    let signal: Signal = 'NEUTRAL';
+    if (currentK < 20 && currentK > currentD) signal = 'BUY'; // Bullish cross in oversold
+    else if (currentK > 80 && currentK < currentD) signal = 'SELL'; // Bearish cross in overbought
+
+    return {
+        k: kLine,
+        d: dLine,
+        current: { k: currentK, d: currentD },
+        signal
+    };
+}
+
+// ============================================================================
+// ADX (Average Directional Index)
+// ============================================================================
+
+export interface ADXResult {
+    adx: number;
+    plusDI: number;
+    minusDI: number;
+    values: number[];
+}
+
+/**
+ * Calculates Average Directional Index (ADX)
+ * Used to quantify trend strength
+ * 
+ * @param highs - Array of high prices
+ * @param lows - Array of low prices
+ * @param closes - Array of closing prices
+ * @param period - Period (default: 14)
+ */
+export function calculateADX(
+    highs: number[],
+    lows: number[],
+    closes: number[],
+    period: number = 14
+): ADXResult | null {
+    if (!highs || !lows || !closes || highs.length < period * 2) {
+        return null;
+    }
+
+    const tr: number[] = [];
+    const plusDM: number[] = [];
+    const minusDM: number[] = [];
+
+    // 1. Calculate TR and DM
+    for (let i = 1; i < closes.length; i++) {
+        const h = highs[i];
+        const l = lows[i];
+        const prevC = closes[i - 1];
+
+        const trVal = Math.max(h - l, Math.abs(h - prevC), Math.abs(l - prevC));
+        tr.push(trVal);
+
+        const upMove = h - highs[i - 1];
+        const downMove = lows[i - 1] - l;
+
+        if (upMove > downMove && upMove > 0) plusDM.push(upMove);
+        else plusDM.push(0);
+
+        if (downMove > upMove && downMove > 0) minusDM.push(downMove);
+        else minusDM.push(0);
+    }
+
+    // 2. Wilder's Smoothing for first period
+    let smoothTR = 0;
+    let smoothPlusDM = 0;
+    let smoothMinusDM = 0;
+
+    for (let i = 0; i < period; i++) {
+        smoothTR += tr[i];
+        smoothPlusDM += plusDM[i];
+        smoothMinusDM += minusDM[i];
+    }
+
+    // Initial values
+    const dxValues: number[] = [];
+    const adxValues: number[] = [];
+
+    // Helper to calculate DX
+    const calcDX = (pDM: number, mDM: number, sTR: number) => {
+        if (sTR === 0) return 0;
+        const pDI = (pDM / sTR) * 100;
+        const mDI = (mDM / sTR) * 100;
+        if (pDI + mDI === 0) return 0;
+        return (Math.abs(pDI - mDI) / (pDI + mDI)) * 100;
+    };
+
+    dxValues.push(calcDX(smoothPlusDM, smoothMinusDM, smoothTR));
+
+    // 3. Wilder's Smoothing for subsequent periods
+    for (let i = period; i < tr.length; i++) {
+        smoothTR = smoothTR - (smoothTR / period) + tr[i];
+        smoothPlusDM = smoothPlusDM - (smoothPlusDM / period) + plusDM[i];
+        smoothMinusDM = smoothMinusDM - (smoothMinusDM / period) + minusDM[i];
+
+        dxValues.push(calcDX(smoothPlusDM, smoothMinusDM, smoothTR));
+    }
+
+    // 4. Calculate ADX (SMA of DX)
+    if (dxValues.length < period) return null;
+
+    let sumDX = 0;
+    for (let i = 0; i < period; i++) {
+        sumDX += dxValues[i];
+    }
+    adxValues.push(sumDX / period);
+
+    for (let i = period; i < dxValues.length; i++) {
+        const prevADX = adxValues[adxValues.length - 1];
+        const currentADX = (prevADX * (period - 1) + dxValues[i]) / period;
+        adxValues.push(currentADX);
+    }
+
+    const currentADX = adxValues[adxValues.length - 1];
+
+    // Calculate final DI values for return
+    const currentPlusDI = (smoothPlusDM / smoothTR) * 100;
+    const currentMinusDI = (smoothMinusDM / smoothTR) * 100;
+
+    return {
+        adx: currentADX,
+        plusDI: currentPlusDI,
+        minusDI: currentMinusDI,
+        values: adxValues
+    };
+}
+
+// ============================================================================
 // Composite Analysis
 // ============================================================================
 
@@ -513,8 +715,12 @@ export interface TechnicalAnalysisResult {
     rsi: IndicatorResult | null;
     macd: MACDResult | null;
     bollingerBands: BollingerBandsResult | null;
+    adx: ADXResult | null;
     sma20: IndicatorResult | null;
+    ema20: IndicatorResult | null;
+    ema50: IndicatorResult | null;
     ema12: IndicatorResult | null;
+    stochastic: StochasticResult | null;
     volume: VolumeAnalysisResult | null;
     atr: number | null;
     overallSignal: Signal;
@@ -623,7 +829,22 @@ export function performTechnicalAnalysis(
     const macd = calculateMACD(validPrices);
     const bollingerBands = calculateBollingerBands(validPrices);
     const sma20 = calculateSMA(validPrices, 20);
+    const ema20 = calculateEMA(validPrices, 20);
+    const ema50 = calculateEMA(validPrices, 50);
     const ema12 = calculateEMA(validPrices, 12);
+
+    // Stochastic needs highs/lows
+    let stochastic = null;
+    if (highs && lows && highs.length === prices.length && lows.length === prices.length) {
+        stochastic = calculateStochastic(highs, lows, validPrices);
+    }
+
+    // ADX
+    let adx = null;
+    if (highs && lows && highs.length === prices.length && lows.length === prices.length) {
+        adx = calculateADX(highs, lows, validPrices);
+    }
+
     const volume = validVolumes.length >= 20 ? analyzeVolume(validVolumes) : null;
 
     // Calculate ATR if highs and lows are provided
@@ -692,7 +913,11 @@ export function performTechnicalAnalysis(
         macd,
         bollingerBands,
         sma20,
+        ema20,
+        ema50,
         ema12,
+        stochastic,
+        adx,
         volume,
         atr,
         overallSignal,

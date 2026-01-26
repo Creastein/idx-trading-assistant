@@ -80,33 +80,101 @@ interface ChartResult {
     quotes: HistoricalQuote[];
 }
 
+interface QuoteResult {
+    regularMarketPrice?: number;
+}
+
 // ============================================================================
 // Constants
 // ============================================================================
 
-const SCALPING_TIMEFRAMES = ["1m", "5m", "15m", "60m"] as const;
-const SWING_TIMEFRAMES = ["60m", "1d", "1wk", "1mo"] as const;
+/**
+ * Internal timeframe keys used by this module.
+ *
+ * Notes:
+ * - Yahoo Finance does not provide a native "4h" interval for equities.
+ *   We generate "4h" candles by aggregating "1h" (60m) candles.
+ */
+type InternalInterval = "1m" | "5m" | "15m" | "1h" | "4h" | "1d" | "1w";
 
-const TIMEFRAME_PERIODS: Record<string, number> = {
+const SCALPING_TIMEFRAMES: readonly InternalInterval[] = ["1m", "5m", "15m", "1h"] as const;
+const SWING_TIMEFRAMES: readonly InternalInterval[] = ["1h", "4h", "1d", "1w"] as const;
+
+const TIMEFRAME_PERIODS: Record<InternalInterval, number> = {
     "1m": 1,
     "5m": 5,
     "15m": 15,
-    "60m": 5,
+    "1h": 14,
+    "4h": 60,
     "1d": 60,
-    "1wk": 180,
-    "1mo": 365,
+    "1w": 365,
 };
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
+function toNumberOrNull(value: number | null | undefined): number | null {
+    return value === null || value === undefined || Number.isNaN(value) ? null : value;
+}
+
+/**
+ * Aggregate 1h candles into synthetic 4h candles.
+ * We group consecutive 1h candles (4 at a time) into a single bar.
+ */
+function aggregateTo4h(hourly: HistoricalQuote[]): HistoricalQuote[] {
+    if (!hourly || hourly.length < 4) return [];
+
+    const result: HistoricalQuote[] = [];
+
+    for (let i = 0; i + 3 < hourly.length; i += 4) {
+        const chunk = hourly.slice(i, i + 4);
+
+        const opens = toNumberOrNull(chunk[0]?.open);
+        const closes = toNumberOrNull(chunk[chunk.length - 1]?.close);
+
+        const highs = chunk.map((q) => toNumberOrNull(q.high)).filter((v): v is number => v != null);
+        const lows = chunk.map((q) => toNumberOrNull(q.low)).filter((v): v is number => v != null);
+        const volumes = chunk.map((q) => toNumberOrNull(q.volume)).filter((v): v is number => v != null);
+
+        // If the chunk can't produce a usable OHLC, skip it.
+        if (opens == null || closes == null || highs.length === 0 || lows.length === 0) continue;
+
+        result.push({
+            date: chunk[chunk.length - 1].date,
+            open: opens,
+            high: Math.max(...highs),
+            low: Math.min(...lows),
+            close: closes,
+            volume: volumes.length > 0 ? volumes.reduce((a, b) => a + b, 0) : null,
+        });
+    }
+
+    return result;
+}
+
+function toYahooInterval(interval: InternalInterval): "1m" | "5m" | "15m" | "60m" | "1d" | "1wk" {
+    switch (interval) {
+        case "1m":
+        case "5m":
+        case "15m":
+            return interval;
+        case "1h":
+        case "4h":
+            return "60m";
+        case "1d":
+            return "1d";
+        case "1w":
+            return "1wk";
+    }
+}
+
 /**
  * Fetch historical data for a specific timeframe
  */
 async function fetchTimeframeData(
     symbol: string,
-    interval: string,
+    interval: InternalInterval,
     daysBack: number
 ): Promise<HistoricalQuote[]> {
     try {
@@ -116,10 +184,14 @@ async function fetchTimeframeData(
         const chartResult = await yahooFinance.chart(symbol, {
             period1: startDate,
             period2: endDate,
-            interval: interval as "1m" | "5m" | "15m" | "60m" | "1d" | "1wk" | "1mo",
+            interval: toYahooInterval(interval),
         }) as ChartResult;
 
-        return chartResult.quotes || [];
+        const quotes = chartResult.quotes || [];
+        if (interval === "4h") {
+            return aggregateTo4h(quotes);
+        }
+        return quotes;
     } catch (error) {
         console.warn(`Failed to fetch ${interval} data for ${symbol}:`, error);
         return [];
@@ -232,7 +304,7 @@ function getEMAAlignment(
  */
 async function analyzeTimeframe(
     symbol: string,
-    interval: string
+    interval: InternalInterval
 ): Promise<TimeframeAnalysis | null> {
     const daysBack = TIMEFRAME_PERIODS[interval] || 30;
     const historical = await fetchTimeframeData(symbol, interval, daysBack);
@@ -424,11 +496,14 @@ export async function analyzeMultipleTimeframes(
     const timeframeIntervals =
         mode === "scalping" ? SCALPING_TIMEFRAMES : SWING_TIMEFRAMES;
 
-    // Analyze all timeframes in parallel
-    const analysisPromises = timeframeIntervals.map((interval) =>
-        analyzeTimeframe(symbolWithSuffix, interval)
-    );
-    const results = await Promise.all(analysisPromises);
+    // Analyze all timeframes in parallel (plus current quote price)
+    const analysisPromises = timeframeIntervals.map((interval) => analyzeTimeframe(symbolWithSuffix, interval));
+    const quotePromise = yahooFinance
+        .quote(symbolWithSuffix)
+        .then((q) => q as QuoteResult)
+        .catch(() => null);
+
+    const [results, quote] = await Promise.all([Promise.all(analysisPromises), quotePromise]);
 
     // Filter out null results
     const timeframes = results.filter(
@@ -441,13 +516,15 @@ export async function analyzeMultipleTimeframes(
             ? calculateConfluence(timeframes)
             : { direction: "MIXED" as const, strength: 0, agreement: "0/0 timeframes" };
 
-    // Get current price from first available timeframe
-    let currentPrice = 0;
-    if (timeframes.length > 0) {
-        // Use the midpoint of key levels as approximation
+    // Prefer real current price from quote; fallback to a reasonable approximation.
+    let currentPrice = quote?.regularMarketPrice ?? 0;
+
+    if (!currentPrice || !Number.isFinite(currentPrice)) {
+        // Approximation: midpoint of key levels of the first available timeframe
         const firstTF = timeframes[0];
-        currentPrice =
-            (firstTF.key_levels.support + firstTF.key_levels.resistance) / 2;
+        if (firstTF) {
+            currentPrice = (firstTF.key_levels.support + firstTF.key_levels.resistance) / 2;
+        }
     }
 
     // Generate recommendation

@@ -44,8 +44,11 @@ export default function MultiTimeframePanel({ analysis }: MultiTimeframePanelPro
             "1m": "1 Min",
             "5m": "5 Min",
             "15m": "15 Min",
+            "1h": "1 Hour",
+            "4h": "4 Hour",
             "60m": "1 Hour",
             "1d": "Daily",
+            "1w": "Weekly",
             "1wk": "Weekly",
             "1mo": "Monthly"
         };

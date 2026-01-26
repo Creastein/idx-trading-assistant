@@ -55,6 +55,8 @@ interface ChartResult {
     quotes: HistoricalQuote[];
 }
 
+type ChartInterval = "1m" | "5m" | "1h" | "1d";
+
 // ============================================================================
 // Cache Implementation
 // ============================================================================
@@ -67,6 +69,23 @@ const CACHE_DURATION_SWING = 60 * 60 * 1000; // 1 hour
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+async function fetchChart(
+    symbolWithSuffix: string,
+    interval: ChartInterval,
+    daysBack: number
+): Promise<HistoricalQuote[]> {
+    const endDate = new Date();
+    const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
+
+    const chartResult = await yahooFinance.chart(symbolWithSuffix, {
+        period1: startDate,
+        period2: endDate,
+        interval,
+    }) as ChartResult;
+
+    return chartResult.quotes || [];
+}
 
 /**
  * Calculate Average True Range (ATR) for volatility measurement
@@ -209,7 +228,11 @@ function generateSignals(
                 type: "BUY",
                 indicator: "MACD",
                 reason: "Bullish MACD crossover detected",
-                strength: Math.abs(analysis.macd.current.histogram) > 10 ? "STRONG" : "MEDIUM",
+                strength:
+                    Math.abs(analysis.macd.current.histogram) >
+                        Math.max(1e-9, Math.abs(analysis.macd.current.macd)) * 0.5
+                        ? "STRONG"
+                        : "MEDIUM",
                 price: currentPrice,
             });
         } else if (analysis.macd.crossover === "BEARISH") {
@@ -217,7 +240,11 @@ function generateSignals(
                 type: "SELL",
                 indicator: "MACD",
                 reason: "Bearish MACD crossover detected",
-                strength: Math.abs(analysis.macd.current.histogram) > 10 ? "STRONG" : "MEDIUM",
+                strength:
+                    Math.abs(analysis.macd.current.histogram) >
+                        Math.max(1e-9, Math.abs(analysis.macd.current.macd)) * 0.5
+                        ? "STRONG"
+                        : "MEDIUM",
                 price: currentPrice,
             });
         }
@@ -268,6 +295,24 @@ function generateSignals(
         }
     }
 
+    // --- Trend Pullback Strategy (Phase 2) ---
+    // Rule: Strong Uptrend (Price > EMA50) + RSI Healthy Dip (40-60) + Stochastic Bullish Cross
+    if (analysis.ema50 && analysis.rsi && analysis.stochastic) {
+        const isUptrend = currentPrice > analysis.ema50.current;
+        const isHealthyDip = analysis.rsi.current >= 40 && analysis.rsi.current <= 60;
+        const isStochCrossUp = analysis.stochastic.current.k > analysis.stochastic.current.d && analysis.stochastic.current.k < 80;
+
+        if (isUptrend && isHealthyDip && isStochCrossUp) {
+            signals.push({
+                type: "BUY",
+                indicator: "Trend Pullback",
+                reason: "Healthy dip in uptrend (RSI 40-60) + Stochastic cross up",
+                strength: "STRONG",
+                price: currentPrice
+            });
+        }
+    }
+
     return signals;
 }
 
@@ -294,15 +339,19 @@ function generateRecommendation(
     // Strong Buy: 3+ buy signals including at least 1 strong
     if (buySignals.length >= 3 && strongBuySignals.length >= 1) {
         action = "STRONG_BUY";
-        confidence = Math.min(90, 60 + buySignals.length * 10);
+        confidence = Math.min(90, 70 + buySignals.length * 5);
         reasoning.push(`${buySignals.length} bullish indicators aligned`);
         reasoning.push(`Strong signals from: ${strongBuySignals.map((s) => s.indicator).join(", ")}`);
     }
-    // Buy: 2+ buy signals
-    else if (buySignals.length >= 2) {
+    // Buy: 2+ buy signals OR 1 Strong Signal (e.g. Trend Pullback)
+    else if (buySignals.length >= 2 || strongBuySignals.length >= 1) {
         action = "BUY";
-        confidence = 50 + buySignals.length * 10;
-        reasoning.push(`${buySignals.length} bullish indicators present`);
+        confidence = 60 + buySignals.length * 5;
+        if (strongBuySignals.length >= 1) {
+            reasoning.push(`High-quality setup detected: ${strongBuySignals[0].indicator}`);
+        } else {
+            reasoning.push(`${buySignals.length} bullish indicators present`);
+        }
     }
     // Strong Sell: 3+ sell signals including at least 1 strong
     else if (sellSignals.length >= 3 && strongSellSignals.length >= 1) {
@@ -335,6 +384,176 @@ function generateRecommendation(
     }
 
     return { action, confidence, reasoning };
+}
+
+function applyScalpingFilters(params: {
+    recommendation: {
+        action: "STRONG_BUY" | "BUY" | "HOLD" | "SELL" | "STRONG_SELL";
+        confidence: number;
+        reasoning: string[];
+    };
+    signals: Signal[];
+    currentPrice: number;
+    trigger: { buyConfirmed: boolean; sellConfirmed: boolean; reason: string | null };
+    volumeRatio: number | null;
+    analysis: TechnicalAnalysisResult; // Need full analysis for 5m trend & BB
+    trend1h?: 'UP' | 'DOWN' | 'NEUTRAL'; // Phase 3: Major Trend
+    atr?: number | null; // Phase 3: Volatility Quality
+}) {
+    const { recommendation, currentPrice, trigger, volumeRatio, analysis, trend1h, atr } = params;
+
+    // --- 0. Volatility Quality Filter (Phase 3) ---
+    // If ATR is too low (< 0.5% of price), the stock is "dead". Scalping is impossible due to fees.
+    if (atr && currentPrice > 0) {
+        const volatilityPct = (atr / currentPrice) * 100;
+        if (volatilityPct < 0.4) {
+            recommendation.reasoning.unshift(`Volatility too low (ATR ${volatilityPct.toFixed(2)}%) → DEAD STOCK`);
+            recommendation.action = "HOLD";
+            recommendation.confidence = 0;
+            return; // Hard reject
+        }
+    }
+
+    // --- 0.1 Trend Strength (ADX) ---
+    // New Feature: Sync with Screener Logic
+    if (analysis.adx) {
+        const adx = analysis.adx.adx;
+        if (adx < 20) {
+            recommendation.reasoning.unshift(`Weak Trend (ADX ${adx.toFixed(0)}) → CHOPPY`);
+            recommendation.confidence = Math.min(recommendation.confidence, 40);
+            if (recommendation.action !== "HOLD") recommendation.action = "HOLD";
+        } else if (adx > 30) {
+            recommendation.confidence += 10;
+            recommendation.reasoning.push(`Strong Trend (ADX ${adx.toFixed(0)})`);
+        }
+    }
+
+    // --- 1. Strong MTF Trend Filter (Phase 3) ---
+    // If 1H is DOWN, do not BUY (unless it's a deep oversold reversal, but for scalping we want flow).
+    // If 1H is UP, do not SELL.
+    if (trend1h) {
+        const wantsBuy = recommendation.action === "BUY" || recommendation.action === "STRONG_BUY";
+        const wantsSell = recommendation.action === "SELL" || recommendation.action === "STRONG_SELL";
+
+        if (wantsBuy && trend1h === 'DOWN') {
+            recommendation.reasoning.unshift("Major Trend (1H) is DOWN → DANGEROUS/HOLD");
+            recommendation.action = "HOLD";
+            recommendation.confidence = Math.min(recommendation.confidence, 30);
+        } else if (wantsSell && trend1h === 'UP') {
+            recommendation.reasoning.unshift("Major Trend (1H) is UP → DANGEROUS/HOLD");
+            recommendation.action = "HOLD";
+            recommendation.confidence = Math.min(recommendation.confidence, 30);
+        } else if ((wantsBuy && trend1h === 'UP') || (wantsSell && trend1h === 'DOWN')) {
+            recommendation.reasoning.push(`Major Trend (1H) aligned (${trend1h})`);
+            recommendation.confidence += 10; // Boost confidence significantly
+        }
+    }
+
+    // --- 2. Time Filter (Liquidity Check) ---
+    // Avoid pre-lunch (11:30 - 13:30) and pre-close volatility/low volume
+    const now = new Date();
+    // Convert to WIB (UTC+7) roughly for server time check or assume server is local/UTC.
+    // Ideally use exchange time. For now, simple hour based check if running during market hours.
+    // If testing offline/weekend, this might block, so we'll make it soft or only apply if meaningful.
+    // SKIP implementation for now to avoid timezone complexities in this snippet without robust Timezone lib.
+    // Instead, we focus on technicals.
+
+    // --- 2. Trend Bias Filter (5m) ---
+    // Rule: BUY only if Price > EMA20 (5m) AND EMA20 is rising (optional, hard to check slope with single point, so Price > EMA20 is primary).
+    // SELL only if Price < EMA20 (5m).
+    if (analysis.ema20) {
+        const ema20 = analysis.ema20.current;
+        const wantsBuy = recommendation.action === "BUY" || recommendation.action === "STRONG_BUY";
+        const wantsSell = recommendation.action === "SELL" || recommendation.action === "STRONG_SELL";
+
+        if (wantsBuy && currentPrice < ema20) {
+            recommendation.reasoning.unshift("Counter-trend (Price < EMA20 5m) → HOLD");
+            recommendation.action = "HOLD";
+            recommendation.confidence = Math.min(recommendation.confidence, 40);
+        } else if (wantsSell && currentPrice > ema20) {
+            recommendation.reasoning.unshift("Counter-trend (Price > EMA20 5m) → HOLD");
+            recommendation.action = "HOLD";
+            recommendation.confidence = Math.min(recommendation.confidence, 40);
+        } else {
+            // Trend aligned
+            if (recommendation.action !== "HOLD") {
+                recommendation.reasoning.push("Trend aligned (Price vs EMA20 5m)");
+                recommendation.confidence += 5;
+            }
+
+            // Extra: Stochastic Momentum Check
+            if (analysis.stochastic) {
+                const k = analysis.stochastic.current.k;
+                const d = analysis.stochastic.current.d;
+                // If buying, we want momentum up (k > d) or at least not exhausted (k < 80)
+                if (wantsBuy && k < d && k > 60) {
+                    // Minor warning: momentum fading
+                    recommendation.confidence -= 5;
+                }
+            }
+        }
+    }
+
+    // --- 3. Chop/Sideways Filter (BB Bandwidth) ---
+    // Rule: If BB Bandwidth is very low, market is squeezing/choppy.
+    if (analysis.bollingerBands) {
+        const bandwidth = analysis.bollingerBands.current.bandwidth; // percentage
+        const MIN_BANDWIDTH = 1.0; // 1% threshold, adjust based on asset class
+
+        if (bandwidth < MIN_BANDWIDTH && recommendation.action !== "HOLD") {
+            recommendation.reasoning.unshift(`Squeeze/Chop detected (BBW ${bandwidth.toFixed(2)}%) → HOLD/WAIT`);
+            recommendation.action = "HOLD";
+            recommendation.confidence = 30;
+        }
+    }
+
+    // --- 4. Volume/Participation Filter ---
+    // 1) Require decent participation (volume ratio) for scalping
+    if (volumeRatio != null && volumeRatio < 1.2 && recommendation.action !== "HOLD") {
+        recommendation.reasoning.unshift("Low relative volume (no confirmation) → HOLD");
+        recommendation.action = "HOLD";
+        recommendation.confidence = Math.min(recommendation.confidence, 45);
+    }
+
+    // --- 5. Trigger Confirmation (1m) ---
+    // 2) Require 1m trigger confirmation to avoid early entries
+    const wantsBuy = recommendation.action === "BUY" || recommendation.action === "STRONG_BUY";
+    const wantsSell = recommendation.action === "SELL" || recommendation.action === "STRONG_SELL";
+
+    if (wantsBuy && !trigger.buyConfirmed) {
+        recommendation.reasoning.unshift(trigger.reason || "1m trigger not confirmed → HOLD");
+        recommendation.action = "HOLD";
+        recommendation.confidence = Math.min(recommendation.confidence, 45);
+    }
+
+    if (wantsSell && !trigger.sellConfirmed) {
+        recommendation.reasoning.unshift(trigger.reason || "1m trigger not confirmed → HOLD");
+        recommendation.action = "HOLD";
+        recommendation.confidence = Math.min(recommendation.confidence, 45);
+    }
+
+    // --- 6. Fee-Aware Targets ---
+    // 3) Fee-aware sanity: if the move is too small, it's not worth scalping
+    // IDX round-trip fees ~0.40% (buy 0.15% + sell 0.25%). Add a small buffer for slippage.
+    const minMovePct = 0.8; // conservative: fees+slippage+noise
+    const strongSignals = params.signals.filter((s) => s.strength === "STRONG").length;
+    const relaxedMinMovePct = strongSignals >= 2 ? 0.6 : minMovePct;
+
+    // Approximate "expected" room using nearest take-profit logic (we don't have TP here)
+    // Use the absolute change implied by confidence as a proxy: higher confidence allows slightly tighter moves.
+    const impliedMovePct = Math.max(0.3, Math.min(1.5, recommendation.confidence / 100)); // 0.3% .. 1.5%
+    if (recommendation.action !== "HOLD" && impliedMovePct < relaxedMinMovePct) {
+        recommendation.reasoning.unshift("Move too small vs fees/slippage → HOLD");
+        recommendation.action = "HOLD";
+        recommendation.confidence = Math.min(recommendation.confidence, 40);
+    }
+
+    // Prevent silly values (defensive)
+    if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+        recommendation.action = "HOLD";
+        recommendation.confidence = 0;
+        recommendation.reasoning = ["Invalid price data"];
+    }
 }
 
 // ============================================================================
@@ -385,21 +604,30 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch historical data - increased period for proper indicator calculation
-        const daysBack = requestMode === "scalping" ? 30 : 90;
-        const endDate = new Date();
-        const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
+        const isScalping = requestMode === "scalping";
 
-        console.log('[Stock API] Fetching historical data:', { daysBack, startDate: startDate.toISOString(), endDate: endDate.toISOString() });
+        // Scalping MUST use intraday candles (1m/5m), otherwise indicators are "daily" and not usable for scalping entries.
+        // Swing uses daily candles.
+        let historical5m: HistoricalQuote[] = [];
+        let historical1m: HistoricalQuote[] = [];
+        let historical1h: HistoricalQuote[] = [];
+        let historicalMain: HistoricalQuote[] = [];
 
-        let historicalData: HistoricalQuote[] = [];
         try {
-            const chartResult = await yahooFinance.chart(symbolWithSuffix, {
-                period1: startDate,
-                period2: endDate,
-                interval: "1d",
-            }) as ChartResult;
-            historicalData = chartResult.quotes;
-            console.log('[Stock API] Historical data points:', historicalData.length);
+            if (isScalping) {
+                // 5m: broader context; 1m: trigger confirmation; 1h: major trend (Phase 3)
+                historical5m = await fetchChart(symbolWithSuffix, "5m", 10);
+                historical1m = await fetchChart(symbolWithSuffix, "1m", 2);
+                historical1h = await fetchChart(symbolWithSuffix, "1h", 60); // 60 days back for 1h EMA50
+                historicalMain = historical5m.length >= 50 ? historical5m : historical1m;
+            } else {
+                const daysBack = 90;
+                historicalMain = await fetchChart(symbolWithSuffix, "1d", daysBack);
+            }
+            console.log('[Stock API] Historical data points:', {
+                main: historicalMain.length,
+                ...(isScalping ? { "1h": historical1h.length, "5m": historical5m.length, "1m": historical1m.length } : {}),
+            });
         } catch (histError: unknown) {
             const histErrorMessage = histError instanceof Error ? histError.message : 'Unknown error';
             console.error('[Stock API] Historical data fetch failed:', histErrorMessage);
@@ -407,17 +635,17 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate we have minimum required data
-        if (!historicalData || historicalData.length < 20) {
-            console.error('[Stock API] Insufficient data:', historicalData?.length || 0);
+        if (!historicalMain || historicalMain.length < 20) {
+            console.error('[Stock API] Insufficient data:', historicalMain?.length || 0);
             return NextResponse.json({
                 error: 'Insufficient historical data',
-                details: `Only ${historicalData?.length || 0} data points available. Need minimum 20.`,
+                details: `Only ${historicalMain?.length || 0} data points available. Need minimum 20.`,
                 suggestion: 'This stock may have limited trading history. Try BBCA, BBRI, or TLKM.'
             }, { status: 400 });
         }
 
         // Extract price arrays with detailed logging for invalid values
-        const closes = historicalData
+        const closes = historicalMain
             .map((q) => q.close)
             .filter((c): c is number => {
                 const isValid = c !== null && c !== undefined && !isNaN(c) && c > 0;
@@ -427,14 +655,26 @@ export async function POST(request: NextRequest) {
                 return isValid;
             });
 
-        const volumes = historicalData
+        const volumes = historicalMain
             .map((q) => q.volume)
             .filter((v): v is number => {
                 const isValid = v !== null && v !== undefined && !isNaN(v) && v >= 0;
                 return isValid;
             });
 
-        console.log(`[Stock API] Filtered ${closes.length} valid prices from ${historicalData.length} quotes`);
+        const highs = historicalMain
+            .map((q) => q.high)
+            .filter((h): h is number => {
+                return h !== null && h !== undefined && !isNaN(h) && h > 0;
+            });
+
+        const lows = historicalMain
+            .map((q) => q.low)
+            .filter((l): l is number => {
+                return l !== null && l !== undefined && !isNaN(l) && l > 0;
+            });
+
+        console.log(`[Stock API] Filtered ${closes.length} valid prices from ${historicalMain.length} quotes`);
 
         // Validate we have enough valid close prices
         if (closes.length < 20) {
@@ -454,7 +694,8 @@ export async function POST(request: NextRequest) {
 
         if (closes.length >= 26) {
             try {
-                analysis = performTechnicalAnalysis(closes, volumes);
+                // Pass highs and lows for ADX/Stochastic calculations
+                analysis = performTechnicalAnalysis(closes, volumes, highs, lows);
                 console.log('[Stock API] ✓ Technical analysis completed:', {
                     rsi: analysis?.rsi?.current,
                     macdLine: analysis?.macd?.current?.macd,
@@ -505,8 +746,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Calculate ATR and support/resistance
-        const atr = calculateATR(historicalData);
-        const supportResistance = findSupportResistance(historicalData);
+        const atr = calculateATR(historicalMain);
+        const supportResistance = findSupportResistance(historicalMain);
 
         // Generate signals and recommendation
         const currentPrice = quote.regularMarketPrice;
@@ -524,6 +765,65 @@ export async function POST(request: NextRequest) {
         if (analysis) {
             signals = generateSignals(analysis, currentPrice, volumeAnalysisResult);
             recommendation = generateRecommendation(signals, analysis);
+
+            // Scalping-specific accuracy boosts:
+            // - use 1m trigger confirmation
+            // - require sufficient relative volume
+            if (isScalping) {
+                const closes1m = historical1m
+                    .map((q) => q.close)
+                    .filter((c): c is number => c != null && c > 0);
+                const volumes1m = historical1m
+                    .map((q) => q.volume)
+                    .filter((v): v is number => v != null && v >= 0);
+
+                // Phase 3: MTF Trend (1H)
+                const closes1h = historical1h
+                    .map((q) => q.close)
+                    .filter((c): c is number => c != null && c > 0);
+                const ema50_1h = closes1h.length >= 60 ? calculateEMA(closes1h, 50) : null;
+                const trend1h = ema50_1h && closes1h.length > 0 ? (closes1h[closes1h.length - 1] > ema50_1h.current ? 'UP' : 'DOWN') : 'NEUTRAL';
+
+                const ema20_1m = closes1m.length >= 25 ? calculateEMA(closes1m, 20) : null;
+                const vol1m = volumes1m.length >= 30 ? analyzeVolume(volumes1m) : null;
+
+                const last1m = closes1m.length > 0 ? closes1m[closes1m.length - 1] : null;
+                const buyConfirmed = !!(last1m && ema20_1m && last1m > ema20_1m.current && (vol1m?.volumeRatio ?? 0) >= 1.2);
+                const sellConfirmed = !!(last1m && ema20_1m && last1m < ema20_1m.current && (vol1m?.volumeRatio ?? 0) >= 1.2);
+
+                if (buyConfirmed) {
+                    signals.push({
+                        type: "BUY",
+                        indicator: "1m Trigger",
+                        reason: "1m price above EMA20 with volume expansion",
+                        strength: "MEDIUM",
+                        price: currentPrice,
+                    });
+                } else if (sellConfirmed) {
+                    signals.push({
+                        type: "SELL",
+                        indicator: "1m Trigger",
+                        reason: "1m price below EMA20 with volume expansion",
+                        strength: "MEDIUM",
+                        price: currentPrice,
+                    });
+                }
+
+                applyScalpingFilters({
+                    recommendation,
+                    signals,
+                    currentPrice,
+                    trigger: {
+                        buyConfirmed,
+                        sellConfirmed,
+                        reason: "1m confirmation missing (EMA20 + volume) → HOLD",
+                    },
+                    volumeRatio: volumeAnalysisResult?.volumeRatio ?? null,
+                    analysis,
+                    trend1h,
+                    atr
+                });
+            }
         }
 
         // Build response - return EnhancedStockData with all indicators
@@ -558,6 +858,12 @@ export async function POST(request: NextRequest) {
                     histogram: analysis.macd.current.histogram,
                     crossover: analysis.macd.crossover
                 } : null,
+                adx: analysis?.adx ? {
+                    adx: analysis.adx.adx,
+                    plusDI: analysis.adx.plusDI,
+                    minusDI: analysis.adx.minusDI,
+                    strength: analysis.adx.adx > 25 ? "STRONG" : "WEAK"
+                } : null,
                 bollingerBands: analysis?.bollingerBands ? {
                     upper: analysis.bollingerBands.current.upper,
                     middle: analysis.bollingerBands.current.middle,
@@ -576,6 +882,11 @@ export async function POST(request: NextRequest) {
                     isSpike: volumeAnalysisResult.isSpike,
                     trend: volumeAnalysisResult.volumeRatio > 1.2 ? "INCREASING" as const :
                         volumeAnalysisResult.volumeRatio < 0.8 ? "DECREASING" as const : "STABLE" as const
+                } : null,
+                stochastic: analysis?.stochastic ? {
+                    k: analysis.stochastic.current.k,
+                    d: analysis.stochastic.current.d,
+                    signal: analysis.stochastic.signal
                 } : null,
             },
             signals,

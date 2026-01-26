@@ -55,7 +55,7 @@ export default function WhatsNewModal() {
         {
             icon: <Clock className="w-6 h-6 text-purple-400" />,
             title: "Multi-Timeframe Analysis",
-            description: "Detect confluence across 4 timeframes (15m, 1h, 4h, 1d) for stronger trend confirmation."
+            description: "Detect confluence across 4 timeframes — Scalping: (1m, 5m, 15m, 1h) | Swing: (1h, 4h, 1d, 1w)."
         },
         {
             icon: <Shield className="w-6 h-6 text-green-400" />,
