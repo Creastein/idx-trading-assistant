@@ -60,7 +60,7 @@ export interface Recommendation {
 
 export interface MultiTimeframeAnalysis {
     symbol: string;
-    mode: "scalping" | "swing";
+    mode: "scalping" | "swing" | "custom";
     timeframes: TimeframeAnalysis[];
     confluence: Confluence;
     recommendation: Recommendation;
@@ -487,14 +487,19 @@ function generateRecommendation(
  */
 export async function analyzeMultipleTimeframes(
     symbol: string,
-    mode: "scalping" | "swing"
+    mode: "scalping" | "swing" | "custom",
+    customIntervals?: InternalInterval[]
 ): Promise<MultiTimeframeAnalysis> {
     const symbolWithSuffix = symbol.toUpperCase().endsWith(".JK")
         ? symbol.toUpperCase()
         : `${symbol.toUpperCase()}.JK`;
 
     const timeframeIntervals =
-        mode === "scalping" ? SCALPING_TIMEFRAMES : SWING_TIMEFRAMES;
+        mode === "custom" && customIntervals
+            ? customIntervals
+            : mode === "scalping"
+                ? SCALPING_TIMEFRAMES
+                : SWING_TIMEFRAMES;
 
     // Analyze all timeframes in parallel (plus current quote price)
     const analysisPromises = timeframeIntervals.map((interval) => analyzeTimeframe(symbolWithSuffix, interval));

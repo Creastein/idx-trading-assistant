@@ -106,6 +106,15 @@ export interface EnhancedStockData {
     news?: StockNews[];
     recommendation: Recommendation;
     lastUpdated?: number;
+    financials?: {
+        incomeStatement: {
+            date: string;
+            revenue: number;
+            netIncome: number;
+        }[];
+        profitMargins: number;
+        revenueGrowth: number;
+    };
 }
 
 export interface MarketContext {

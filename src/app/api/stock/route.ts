@@ -592,8 +592,13 @@ export async function POST(request: NextRequest) {
         const symbolWithSuffix = `${normalizedSymbol}.JK`;
         console.log('[Stock API] Fetching symbol:', symbolWithSuffix);
 
-        // Fetch quote data
-        const quote = await yahooFinance.quote(symbolWithSuffix) as QuoteResult;
+        // Fetch quote and financials in parallel
+        const [quote, quoteSummary] = await Promise.all([
+            yahooFinance.quote(symbolWithSuffix) as Promise<QuoteResult>,
+            yahooFinance.quoteSummary(symbolWithSuffix, {
+                modules: ['incomeStatementHistory', 'financialData', 'defaultKeyStatistics']
+            })
+        ]);
 
         if (!quote || !quote.regularMarketPrice) {
             console.error('[Stock API] Quote not found:', symbolWithSuffix);
@@ -893,6 +898,15 @@ export async function POST(request: NextRequest) {
             supportResistance,
             atr,
             recommendation,
+            financials: {
+                incomeStatement: quoteSummary?.incomeStatementHistory?.incomeStatementHistory?.map(item => ({
+                    date: item.endDate?.toISOString().split('T')[0] || '',
+                    revenue: item.totalRevenue || 0,
+                    netIncome: item.netIncome || 0
+                })).reverse() || [], // Reverse to show oldest to newest
+                profitMargins: quoteSummary?.financialData?.profitMargins || 0,
+                revenueGrowth: quoteSummary?.financialData?.revenueGrowth || 0
+            }
         };
 
         // Update cache

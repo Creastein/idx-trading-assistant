@@ -21,6 +21,8 @@ import { REFRESH_INTERVAL } from "@/shared/constants";
 import { ScalpingScreener } from "@/frontend/components/ScalpingScreener";
 import { AnimatedTabs } from "@/frontend/components/AnimatedTabs"; // New Import
 import { AnimatedNumber, AnimatedPriceChange } from "@/frontend/components/AnimatedNumber"; // New Import
+import { FinancialsPanel } from "@/frontend/components/FinancialsPanel"; // New Import
+import { SwingScreener } from "@/frontend/components/SwingScreener";
 
 export default function Home() {
     const [tradingMode, setTradingMode] = useState<TradingMode | null>(null);
@@ -169,6 +171,8 @@ export default function Home() {
         return <ModeSelectionScreen onSelectMode={setTradingMode} />;
     }
 
+
+
     if (tradingMode === 'SCALPING' && !activeSymbol) {
         return (
             <main className="min-h-screen bg-terminal-bg p-6">
@@ -184,6 +188,25 @@ export default function Home() {
                     </div>
                 </div>
                 <ScalpingScreener onSelectStock={loadStock} />
+            </main>
+        );
+    }
+
+    if (tradingMode === 'SWING' && !activeSymbol) {
+        return (
+            <main className="min-h-screen bg-terminal-bg p-6">
+                <div className="max-w-7xl mx-auto flex justify-between items-center mb-8">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setTradingMode(null)} className="text-muted-foreground hover:text-foreground">
+                            ← Change Mode
+                        </button>
+                        <h1 className="text-2xl font-bold font-mono text-indigo-400">🌊 SWING MODE</h1>
+                    </div>
+                    <div className="w-64">
+                        <StockSearch onSelect={loadStock} isLoading={isLoading} />
+                    </div>
+                </div>
+                <SwingScreener />
             </main>
         );
     }
@@ -379,32 +402,41 @@ export default function Home() {
                             )}
 
                             {activeTab === 'keystats' && (
-                                <div className="bg-card/5 rounded-lg p-6 border border-border/10">
-                                    {stockData ? (
-                                        <>
-                                            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4">📊 Fundamental Analysis</h3>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                <div className="p-4 bg-secondary/20 rounded-lg border border-border/10">
-                                                    <p className="text-[10px] text-muted-foreground font-mono uppercase mb-2">Market Cap</p>
-                                                    <p className="font-mono text-lg font-bold">{stockData.marketCap ? (stockData.marketCap / 1e12).toFixed(2) + "T" : "N/A"}</p>
-                                                </div>
-                                                <div className="p-4 bg-secondary/20 rounded-lg border border-border/10">
-                                                    <p className="text-[10px] text-muted-foreground font-mono uppercase mb-2">Volume</p>
-                                                    <p className="font-mono text-lg font-bold">{stockData.volume?.toLocaleString()}</p>
-                                                </div>
-                                                <div className="p-4 bg-secondary/20 rounded-lg border border-border/10">
-                                                    <p className="text-[10px] text-muted-foreground font-mono uppercase mb-2">P/E Ratio</p>
-                                                    <p className="font-mono text-lg font-bold">{stockData.pe?.toFixed(2) || "N/A"}</p>
-                                                </div>
-                                                <div className="p-4 bg-secondary/20 rounded-lg border border-border/10">
-                                                    <p className="text-[10px] text-muted-foreground font-mono uppercase mb-2">P/B Ratio</p>
-                                                    <p className="font-mono text-lg font-bold">{stockData.pb?.toFixed(2) || "N/A"}</p>
-                                                </div>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="p-12 text-center text-muted-foreground">Select a stock to view statistics</div>
+                                <div className="space-y-6">
+                                    {/* Google Finance Style Financials Chart */}
+                                    {enhancedData?.financials && (
+                                        <div className="bg-card/5 rounded-lg p-6 border border-border/10">
+                                            <FinancialsPanel financials={enhancedData.financials} />
+                                        </div>
                                     )}
+
+                                    <div className="bg-card/5 rounded-lg p-6 border border-border/10">
+                                        {stockData ? (
+                                            <>
+                                                <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4">📊 Key Statistics</h3>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                    <div className="p-4 bg-secondary/20 rounded-lg border border-border/10">
+                                                        <p className="text-[10px] text-muted-foreground font-mono uppercase mb-2">Market Cap</p>
+                                                        <p className="font-mono text-lg font-bold">{stockData.marketCap ? (stockData.marketCap / 1e12).toFixed(2) + "T" : "N/A"}</p>
+                                                    </div>
+                                                    <div className="p-4 bg-secondary/20 rounded-lg border border-border/10">
+                                                        <p className="text-[10px] text-muted-foreground font-mono uppercase mb-2">Volume</p>
+                                                        <p className="font-mono text-lg font-bold">{stockData.volume?.toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="p-4 bg-secondary/20 rounded-lg border border-border/10">
+                                                        <p className="text-[10px] text-muted-foreground font-mono uppercase mb-2">P/E Ratio</p>
+                                                        <p className="font-mono text-lg font-bold">{stockData.pe?.toFixed(2) || "N/A"}</p>
+                                                    </div>
+                                                    <div className="p-4 bg-secondary/20 rounded-lg border border-border/10">
+                                                        <p className="text-[10px] text-muted-foreground font-mono uppercase mb-2">P/B Ratio</p>
+                                                        <p className="font-mono text-lg font-bold">{stockData.pb?.toFixed(2) || "N/A"}</p>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="p-12 text-center text-muted-foreground">Select a stock to view statistics</div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
